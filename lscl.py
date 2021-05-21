@@ -66,12 +66,10 @@ file_list = pmapftp.nlst()
 # Find Mylot Data
 
 mylot_data = []
-
 for data in file_list:
     
     if mylot in data:
         mylot_data.append(data)
-        
 
 # Save Files        
     
