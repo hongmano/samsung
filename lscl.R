@@ -8,22 +8,31 @@ if(!require(data.table)){install.packages('data.table')}; require(data.table)
 if(!require(reshape2)){install.packages('reshape2')}; require(reshape2)
 if(!require(BMS)){install.packages('BMS')}; require(BMS)
 if(!require(lubridate)){install.packages('lubridate')}; require(lubridate)
-setwd('C:\\Users\\mano.hong\\Desktop\\lscl')
-source('utils.R')
+
+source('C:\\Users\\mano.hong\\Desktop\\lscl\\utils.R')
 
 # 2. My LOT ---------------------------------------------------------
 
+# Commands from SHELL
+
 mylot <- commandArgs()
-mylotname <- mylot[6] # LOT ID
-MSR_tPD <- as.integer(mylot[7]) # tPD Location
+
+# LOT ID, tPD Location
+
+mylotname <- mylot[6]
+MSR_tPD <- as.integer(mylot[7])
+
+# Read HEADER
 
 setwd(paste0('C:\\Users\\mano.hong\\Desktop\\lscl\\', mylotname))
 header_list <- header()
+file.remove('HEADER.csv')
 
-test_n <- list.files() %>% length()
-test_n <- test_n - 1
+# Read Test Files
 
-dat <- data_load(test_n) # Data Loading
+files <- list.files() %>% sort()
+dat <- data_load(files) # Data Loading
+
 cols <- colnames(dat)
 cols[MSR_tPD] <- 'tPD'
 colnames(dat) <- cols
@@ -41,14 +50,17 @@ dat <- dat %>%
          TESTER = header_list$tester,
          BOARD = header_list$board,
          end_time = header_list$end_time)
-  
-write.csv(dat, paste0(mylotname, '_final.csv'), row.names = F)
+
+write.csv(dat, paste0(mylotname, '_data.csv'), row.names = F)
 
 # 3. Plotting ------------------------------------------------------------
 
+prime_good <- dat %>% filter(test == 0 & HB %in% c(1,2,3,4))
+retest <- dat %>% filter(test == 1)
+
+dat <- rbind(prime_good, retest)
 
 # 3-1. tPDYLD -------------------------------------------------------------
-
 
 tPD_plot(dat)
 print('##################### tPD 저장 완료 ######################')
@@ -58,7 +70,6 @@ print('##################### tPD 저장 완료 ######################')
 
 NB_plot(dat)
 print('##################### NB 저장 완료 ######################')
-
 
 # 3-3. by RUN -------------------------------------------------------------
 
@@ -71,7 +82,6 @@ MAP_plot(dat)
 MAPRUN_plot(dat)
 print('##################### WFMAP 저장 완료 ######################')
 
-
 # 3-5. Wafer Map (tPD) ----------------------------------------------------
 
 MAPtPD_plot(dat)
@@ -79,4 +89,3 @@ MAPtPDRUN_plot(dat)
 print('##################### WFMAP_tPD 저장 완료 ######################')
 
 # 3-6. Line Compare -------------------------------------------------------
-
