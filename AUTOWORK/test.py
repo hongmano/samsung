@@ -14,6 +14,7 @@ import pandas as pd
 from tqdm import tqdm
 
 lscl = input('이상처리?(y/n) :   ')
+MSR = input('MSR?(y/n) : ')
 lot_list = input('Lot List(sep = ' ') :   ')
 lot_list = lot_list.split(' ')
 tPD_location = input('tPD 위치 MSR(?) :   ')
@@ -71,7 +72,7 @@ for lot in tqdm(lot_list):
         mylot_data = []
         
         for data in file_list:
-            	if lot in data:
+            	if lot in data and 'T09' in data:
 
                     mylot_data.append(data)
                     
@@ -79,13 +80,19 @@ for lot in tqdm(lot_list):
     
                         save_data(mylot_data, 0)
                         
-                    else:
+                    elif len(mylot_data) == 2:
 
                         save_data(mylot_data, 0)
                         save_data(mylot_data, 1)
+                        
+                    else:
+                        
+                        save_data(mylot_data, 0)
+                        save_data(mylot_data, 1)
+                        
 
 
 os.chdir('C:/Users/mano.hong/Desktop/AUTOWORK')
-order = 'rscript autowork.R ' + lscl + ' ' + folder + ' ' + tPD_location
+order = 'rscript autowork.R ' + lscl + ' ' + folder + ' ' + tPD_location + ' ' + MSR
 
 os.system(order)
