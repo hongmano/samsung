@@ -16,7 +16,6 @@ read.header <- function(files){
       step = regmatches(dat$DOC_VER.5.0,regexpr('T0[0-9][0-9][A-Z0-9]+', dat$DOC_VER.5.0)),
       test_model = substr(regmatches(dat$DOC_VER.5.0,regexpr('TESTER_MODEL=[A-Z0-9]+', dat$DOC_VER.5.0)), 14 , 100),
       tester = substr(regmatches(dat$DOC_VER.5.0,regexpr('TESTER=[a-z0-9]+', dat$DOC_VER.5.0)), 8 , 100),
-      board = substr(regmatches(dat$DOC_VER.5.0,regexpr('BOARD_ID=[A-Z0-9]+', dat$DOC_VER.5.0)), 10, 100),
       lot = substr(files[i], 1, 10)
       
     )
@@ -39,17 +38,39 @@ read.test <- function(files){
   
   dat_list <- list()
   
+  if(MSR == 'y'){
+  
   for(i in 1:length(files)){
     
     dat_list[[i]] <- fread(files[i], sep = '', header = T) %>% 
+      na.omit() %>% 
       `colnames<-`('V1') %>% 
       wrangling() %>% 
       mutate(test = substr(files[i], 12, 12),
              lot = substr(files[i], 1, 10))
+    
     file.remove(files[i])
+    
+    }    
+  }else{
+    
+    for(i in 1:length(files)){
+      
+      dat_list[[i]] <- fread(files[i], sep = '', header = T) %>% 
+        na.omit() %>% 
+        `colnames<-`('V1') %>% 
+        wrangling() %>% 
+        select('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD') %>% 
+        mutate(test = substr(files[i], 12, 12),
+               lot = substr(files[i], 1, 10))
+      
+      file.remove(files[i])
+    
+    }
   }
   
-  dat <- rbindlist(dat_list) %>% filter(DO != '<EOF>')
+  
+  dat <- rbindlist(dat_list, fill = T) %>% filter(DO != '<EOF>')
   sig <- sig_converting(dat)
   
   dat <- dat %>% inner_join(sig, by = 'SG')
@@ -73,6 +94,8 @@ wrangling <- function(dat){
     `colnames<-`(c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 
                    paste0('MSR', 1:(ns-7))))
   
+  colnames(dat)[tPD_location] <- 'tPD'
+
   return(dat)
   
 }
@@ -205,5 +228,147 @@ byRUN_plot <- function(dat){
           axis.title.x = element_blank())
   
   ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\', 'RUNYLD.png'))
+  
+}
+
+# 3-4. tPD x RUN MAP
+
+tPDRUN_plot <- function(dat){
+  
+  run_16 <- dat %>% group_by(run) %>% tally %>% arrange(desc(n)) %>% head(16)
+  
+  WFmap_tPD <- dat %>% 
+    filter(tPD >= 40 & run %in% run_16$run) %>% 
+    group_by(x, y, run) %>% 
+    summarise(tPD = mean(tPD),
+              .groups = 'drop') 
+  
+  xmax <- max(WFmap_tPD$x, na.rm = T)
+  xmin <- min(WFmap_tPD$x, na.rm = T)
+  ymax <- max(WFmap_tPD$y, na.rm = T)
+  ymin <- min(WFmap_tPD$y, na.rm = T)
+  
+  # plot
+  
+  ggplot(WFmap_tPD,
+         aes(x, y)) +
+    
+    coord_cartesian(xlim = c(xmin, xmax), 
+                    ylim = c(ymin, ymax)) +
+    
+    scale_x_continuous(breaks = seq(xmin, xmax)) +
+    scale_y_continuous(breaks = seq(ymin, ymax))+
+    
+    geom_tile(aes(fill = tPD))+
+    
+    theme_bw() +
+    theme(
+      panel.background = element_rect(fill = 'white', color = 'white'),
+      panel.grid.major = element_line(color = 'white'),
+      panel.grid.minor = element_line(color = 'white'),
+      axis.text.x = element_blank(),
+      axis.text.y = element_blank()
+    ) +
+    
+    facet_wrap(~run) +
+    ggtitle('tPD x RUN') +
+    scale_fill_gradient(low = 'green',
+                        high = 'red')
+  
+  ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\tPDRUN.png'))
+  
+}
+
+# 3-5. NB x RUN MAP
+
+MAPRUN_plot <- function(dat){
+  
+  run_16 <- dat %>% group_by(run) %>% tally %>% arrange(desc(n)) %>% head(16)
+  
+  WFmap <- dat %>% 
+    filter(run %in% run_16$run) %>% 
+    group_by(x, y, run) %>% 
+    summarise(NB = sum(NB_L),
+              .groups = 'drop') %>% 
+    mutate(NB = ifelse(NB == 0, 0, 1))
+  
+  xmax <- max(WFmap$x, na.rm = T)
+  xmin <- min(WFmap$x, na.rm = T)
+  ymax <- max(WFmap$y, na.rm = T)
+  ymin <- min(WFmap$y, na.rm = T)
+  
+  # plot
+  
+  ggplot(WFmap,
+         aes(x, y)) +
+    
+    coord_cartesian(xlim = c(xmin, xmax), 
+                    ylim = c(ymin, ymax)) +
+    
+    scale_x_continuous(breaks = seq(xmin, xmax)) +
+    scale_y_continuous(breaks = seq(ymin, ymax))+
+    
+    geom_tile(aes(fill = NB))+
+    
+    theme_bw() +
+    theme(
+      panel.background = element_rect(fill = 'white', color = 'white'),
+      panel.grid.major = element_line(color = 'white'),
+      panel.grid.minor = element_line(color = 'white'),
+      legend.position = 'none',
+      axis.text.x = element_blank(),
+      axis.text.y = element_blank()
+    ) +
+    
+    facet_wrap(~ run) +
+    ggtitle('Wafer Map') +
+    scale_fill_gradientn(colors = c('skyblue', 'red'))
+  
+  ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\NBRUN.png'))
+  
+}
+
+# 3-6. DUTMAP
+
+DUTMAP <- function(dat){
+  
+  dat <- fread('fin.csv') %>% 
+    mutate(cycle = 1,
+            HB_L = ifelse(HB %in% c(1:4), 'Good',
+                          ifelse(HB %in% c(7:8), 'Env', 'Fail')))
+  
+  dat <- split(dat, dat$lot)
+  
+  for(i in 1:length(dat)){
+    for(j in 2:nrow(dat[[i]])){
+      
+      dat[[i]]$cycle[j] <- ifelse(dat[[i]]$DU[j] < dat[[i]]$DU[j-1], dat[[i]]$cycle[j-1] + 1, dat[[i]]$cycle[j-1])
+ 
+    }
+  }
+  
+  dat <- rbindlist(dat)
+  
+  dat$DU <- factor(dat$DU)
+  dat$cycle <- factor(dat$cycle)
+  
+  
+  ggplot(dat, 
+         aes(x = DU, 
+             y = cycle)) +
+    
+    geom_tile(aes(fill = HB_L), 
+              show.legend = T,
+              na.rm = F,
+              color = 'black') +
+    
+    labs(y = "cycle") +
+    scale_x_discrete(position = "top") +
+    scale_y_discrete(limits = rev(levels(dat$cycle))) + 
+    scale_fill_manual(values = c('red', 'orange', 'blue')) +
+    facet_grid(~lot) + 
+    theme_bw()
+  
+  ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\DUTMAP.jpeg'))
   
 }
