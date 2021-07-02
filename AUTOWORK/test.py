@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Jun 15 17:11:43 2021
-
-@author: mano.hong
-"""
 
 import ftplib
 import sys
@@ -76,6 +71,16 @@ for lot in tqdm(lot_list):
 
                     mylot_data.append(data)
                     
+                    for i in range(1, len(mylot_data)):
+                        
+                        if int(mylot_data[i][-8]) > int(mylot_data[i-1][-8]):
+                            pass
+                        
+                        else:
+                            mylot_data = mylot_data[0:i]
+                            break
+                    
+                    
                     if len(mylot_data) == 1:
     
                         save_data(mylot_data, 0)
@@ -89,6 +94,7 @@ for lot in tqdm(lot_list):
                         
                         save_data(mylot_data, 0)
                         save_data(mylot_data, 1)
+                        save_data(mylot_data, 2)
                         
 
 
