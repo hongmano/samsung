@@ -16,7 +16,7 @@ read.header <- function(files){
       step = regmatches(dat$DOC_VER.5.0,regexpr('T0[0-9][0-9][A-Z0-9]+', dat$DOC_VER.5.0)),
       test_model = substr(regmatches(dat$DOC_VER.5.0,regexpr('TESTER_MODEL=[A-Z0-9]+', dat$DOC_VER.5.0)), 14 , 100),
       tester = substr(regmatches(dat$DOC_VER.5.0,regexpr('TESTER=[a-z0-9]+', dat$DOC_VER.5.0)), 8 , 100),
-      lot = substr(files[i], 1, 10)
+      lot = str_split_fixed(files[i], '_', 2)[1]
       
     )
     
@@ -46,8 +46,8 @@ read.test <- function(files){
       na.omit() %>% 
       `colnames<-`('V1') %>% 
       wrangling() %>% 
-      mutate(test = substr(files[i], 12, 12),
-             lot = substr(files[i], 1, 10))
+      mutate(test = substr(str_split_fixed(files[i], '_', 2)[2], 1, 1),
+             lot = str_split_fixed(files[i], '_', 2)[1])
     
     file.remove(files[i])
     
@@ -145,6 +145,25 @@ sig_converting <- function(dat){
   
 }
 
+dat_fin <- function(dat){
+  
+  dat <- dat %>% 
+    filter(test == 0 & HB %in% c(1:4)|test == 1 & HB %in% c(1:4)|test == 2) %>% 
+    filter(HB != 7 & HB != 8) %>% 
+    mutate(tPD = as.numeric(tPD),
+           NB_L = ifelse(NB == 0, 0, 1),
+           tPD_R = round(tPD, 0),
+           x = as.numeric(x),
+           y = as.numeric(y))
+  
+  HTEMP <- as.numeric(str_split_fixed(dat$HTEMP, ':', 3)[, 1])
+  
+  dat$HTEMP <- HTEMP
+  
+  return(dat)
+  
+}
+
 # 3. Plotting -------------------------------------------------------------
 
 # 3-1. tPD x YLD
@@ -178,6 +197,7 @@ tPD_plot <- function(dat){
 NB_plot <- function(dat){
   
   plot_NB <- dat %>%
+    filter(test == max(test)) %>% 
     mutate(NB = factor(NB)) %>% 
     filter(NB_L != 0) %>% 
     group_by(NB) %>% 
@@ -259,7 +279,8 @@ tPDRUN_plot <- function(dat){
     scale_x_continuous(breaks = seq(xmin, xmax)) +
     scale_y_continuous(breaks = seq(ymin, ymax))+
     
-    geom_tile(aes(fill = tPD))+
+    geom_tile(aes(fill = tPD),
+              color = 'black')+
     
     theme_bw() +
     theme(
@@ -308,7 +329,8 @@ MAPRUN_plot <- function(dat){
     scale_x_continuous(breaks = seq(xmin, xmax)) +
     scale_y_continuous(breaks = seq(ymin, ymax))+
     
-    geom_tile(aes(fill = NB))+
+    geom_tile(aes(fill = NB),
+              color = 'black')+
     
     theme_bw() +
     theme(
