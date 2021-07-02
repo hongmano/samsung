@@ -45,20 +45,13 @@ if(lscl == 'n'){
   
 }else{
   
-  dat_fin <- dat %>% 
-    filter(test == 0 & HB %in% c(1:4)|test == 1) %>% 
-    filter(HB != 7 & HB != 8) %>% 
-    mutate(tPD = as.numeric(tPD),
-           NB_L = ifelse(NB == 0, 0, 1),
-           tPD_R = round(tPD, 0),
-           x = as.numeric(x),
-           y = as.numeric(y))
-  
-  tPD_plot(dat_fin)
-  NB_plot(dat_fin)
-  byRUN_plot(dat_fin)
-  tPDRUN_plot(dat_fin)
-  MAPRUN_plot(dat_fin)
+dat_f <- dat_fin(dat)
+
+  tPD_plot(dat_f)
+  NB_plot(dat_f)
+  byRUN_plot(dat_f)
+  tPDRUN_plot(dat_f)
+  MAPRUN_plot(dat_f)
   DUTMAP(dat)
   
   print('##### END #####')
