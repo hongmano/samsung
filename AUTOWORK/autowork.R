@@ -17,43 +17,57 @@ cmd <- commandArgs()
 
 lscl <- cmd[6]
 folder <- cmd[7]
-tPD_location <- as.numeric(cmd[8]) + 8
-MSR <- cmd[9]
+MSR <- cmd[8]
 
 myfolder <- paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder)
 setwd(myfolder)
 
-file_list <- list.files()
-mylist <- list()
-
-header <- file_list[str_detect(file_list, 'HEADER')] %>% read.header()
-print('##### Header Loading Done #####')
-test <- file_list[str_detect(file_list, '_0|_1|_2')] %>% read.test()
-print('##### PKGMAP Loading Done #####')
-
-dat <- test %>% 
-  inner_join(header, by = 'lot') %>%
-  unique()
-
-fwrite(dat, 'fin.csv', row.names = F)
-print('##### Data Save Done #####')
-
-
 if(lscl == 'n'){
   
+  file_list <- list.files()
+  mylist <- list()
+  
+  header <- file_list[str_detect(file_list, 'HEADER')] %>% read.header()
+  test <- file_list[str_detect(file_list, '_0|_1|_2')] %>% read.test()
+  
+  dat <- test %>% 
+    inner_join(header, by = 'lot') %>%
+    unique()
+  
+  fwrite(dat, 'fin.csv', row.names = F)
+  print('##### Data Save Done #####')
   print('##### END #####')
   
 }else{
   
-dat_f <- dat_fin(dat)
+  folder_list <- list.files()
+  for(i in 1:length(folder_list)){
 
-  tPD_plot(dat_f)
-  NB_plot(dat_f)
-  byRUN_plot(dat_f)
-  tPDRUN_plot(dat_f)
-  MAPRUN_plot(dat_f)
-  DUTMAP(dat)
+    setwd(paste0(myfolder, '\\', folder_list[i]))
+    file_list <- list.files()
+    mylist <- list()
+    
+    header <- file_list[str_detect(file_list, 'HEADER')] %>% read.header()
+    test <- file_list[str_detect(file_list, '_00|_01|_02')] %>% read.test()
+test$lot
+    dat <- test %>% 
+      inner_join(header, by = 'lot') %>%
+      unique()
+    
+    fwrite(dat, 'fin.csv', row.names = F)
+    
+    dat_f <- dat_fin(dat)
+    
+    tPD_plot(dat_f)
+    NB_plot(dat_f)
+    byRUN_plot(dat_f)
+    tPDRUN_plot(dat_f)
+    MAPRUN_plot(dat_f)
+    DUTMAP(dat)
+
+  }
   
+  print('##### Data Save Done #####')
   print('##### END #####')
-
-}
+  
+  }
