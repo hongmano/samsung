@@ -1,3 +1,9 @@
+# 0. PART
+
+mypart <- c('K4F8E3D4HF', 'K4F4E3S4HF', 'K4F4E6S4HF', # NU
+            'K4EBE304ED', 'K4E8E324ED', 'K4E6E304ED', # LC
+            'K4UBE3S4AM', 'K4UCE3D4AM') # KR
+
 
 # 1. READ HEADER ----------------------------------------------------------
 
@@ -41,13 +47,17 @@ read.test <- function(files){
   if(MSR == 'y'){
   
   for(i in 1:length(files)){
+      
+    tPD_location <- ifelse(substr(files[i], 1, 10) %in% mypart, 9, 11)
     
     dat_list[[i]] <- fread(files[i], sep = '', header = T) %>% 
       na.omit() %>% 
       `colnames<-`('V1') %>% 
       wrangling() %>% 
-      mutate(test = substr(str_split_fixed(files[i], '_', 2)[2], 1, 1),
-             lot = str_split_fixed(files[i], '_', 2)[1])
+      mutate(test = substr(str_split_fixed(files[i], '_', 5)[5], 1, 2),
+             lot = str_split_fixed(files[i], '_', 5)[3])
+    
+    colnames(dat_list[[i]])[tPD_location] <- 'tPD'
     
     file.remove(files[i])
     
@@ -56,15 +66,19 @@ read.test <- function(files){
     
     for(i in 1:length(files)){
       
+      tPD_location <- ifelse(substr(files[i], 1, 10) %in% mypart, 9, 11)
+      
       dat_list[[i]] <- fread(files[i], sep = '', header = T) %>% 
         na.omit() %>% 
         `colnames<-`('V1') %>% 
         wrangling() %>% 
         select('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD') %>% 
-        mutate(test = substr(files[i], 12, 12),
-               lot = substr(files[i], 1, 10))
+        mutate(test = substr(str_split_fixed(files[i], '_', 5)[5], 1, 2),
+               lot = str_split_fixed(files[i], '_', 5)[3])
       
-      file.remove(files[i])
+      colnames(dat_list[[i]])[tPD_location] <- 'tPD'
+      
+      #file.remove(files[i])
     
     }
   }
@@ -93,8 +107,6 @@ wrangling <- function(dat){
     as.data.frame() %>% 
     `colnames<-`(c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 
                    paste0('MSR', 1:(ns-7))))
-  
-  colnames(dat)[tPD_location] <- 'tPD'
 
   return(dat)
   
@@ -147,8 +159,10 @@ sig_converting <- function(dat){
 
 dat_fin <- function(dat){
   
+  max_test <- max(dat$test)
+
   dat <- dat %>% 
-    filter(test == 0 & HB %in% c(1:4)|test == 1 & HB %in% c(1:4)|test == 2) %>% 
+    filter(test < max_test & HB %in% c(1:4)|test == max_test) %>% 
     filter(HB != 7 & HB != 8) %>% 
     mutate(tPD = as.numeric(tPD),
            NB_L = ifelse(NB == 0, 0, 1),
@@ -188,7 +202,7 @@ tPD_plot <- function(dat){
     scale_y_continuous(sec.axis = sec_axis(~. / param)) +
     theme_bw()
   
-  ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\', 'tPDYLD.png'))
+  ggsave('tPDYLD.png')
   
 }
 
@@ -211,7 +225,7 @@ NB_plot <- function(dat){
     coord_flip() +
     theme_bw()
   
-  ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\', 'NB.png'))
+  ggsave('NB.png')
   
 }
 
@@ -247,7 +261,7 @@ byRUN_plot <- function(dat){
                                      hjust = 1),
           axis.title.x = element_blank())
   
-  ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\', 'RUNYLD.png'))
+  ggsave('RUNYLD.png')
   
 }
 
@@ -296,7 +310,7 @@ tPDRUN_plot <- function(dat){
     scale_fill_gradient(low = 'green',
                         high = 'red')
   
-  ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\tPDRUN.png'))
+  ggsave('tPDRUN.png')
   
 }
 
@@ -346,7 +360,7 @@ MAPRUN_plot <- function(dat){
     ggtitle('Wafer Map') +
     scale_fill_gradientn(colors = c('skyblue', 'red'))
   
-  ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\NBRUN.png'))
+  ggsave('NBRUN.png')
   
 }
 
@@ -391,6 +405,6 @@ DUTMAP <- function(dat){
     facet_grid(~lot) + 
     theme_bw()
   
-  ggsave(paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder, '\\DUTMAP.jpeg'))
+  ggsave('DUTMAP.jpeg')
   
 }
