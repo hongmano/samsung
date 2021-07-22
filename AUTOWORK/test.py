@@ -84,7 +84,7 @@ for lot in tqdm(lot_list):
                             pass
                         
                         else:
-                            mylot_data = mylot_data[0:i]
+                            del(mylot_data[0:i])
                             break
                     
         if lscl == 'n':
