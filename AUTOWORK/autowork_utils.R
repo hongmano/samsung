@@ -1,8 +1,7 @@
 # 0. PART
 
 mypart <- c('K4F8E3D4HF', 'K4F4E3S4HF', 'K4F4E6S4HF', # NU
-            'K4EBE304ED', 'K4E8E324ED', 'K4E6E304ED', # LC
-            'K4UBE3S4AM', 'K4UCE3D4AM') # KR
+            'K4EBE304ED', 'K4E8E324ED', 'K4E6E304ED') # LC
 
 
 # 1. READ HEADER ----------------------------------------------------------
@@ -66,28 +65,24 @@ read.test <- function(files){
     
     for(i in 1:length(files)){
       
-      tPD_location <- ifelse(substr(files[i], 1, 10) %in% mypart, 9, 11)
-      
       dat_list[[i]] <- fread(files[i], sep = '', header = T) %>% 
         na.omit() %>% 
         `colnames<-`('V1') %>% 
-        wrangling() %>% 
-        select('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD') %>% 
+        wrangling() %>%
+        select('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP') %>% 
         mutate(test = substr(str_split_fixed(files[i], '_', 5)[5], 1, 2),
                lot = str_split_fixed(files[i], '_', 5)[3])
       
-      colnames(dat_list[[i]])[tPD_location] <- 'tPD'
-      
-      #file.remove(files[i])
+      file.remove(files[i])
     
     }
   }
   
+ 
+  dat <- rbindlist(dat_list, fill = T) %>% filter(DO != '<EOF>' & DO != "\"\"")
+  sig <- sig_converting(dat) %>% select(-SG)
   
-  dat <- rbindlist(dat_list, fill = T) %>% filter(DO != '<EOF>')
-  sig <- sig_converting(dat)
-  
-  dat <- dat %>% inner_join(sig, by = 'SG')
+  dat <- dat %>% cbind(sig)
   
   return(dat)
   
@@ -96,10 +91,11 @@ read.test <- function(files){
 wrangling <- function(dat){
   
   dat$V1 <- str_trim(dat$V1)
-  dat$V1 <- str_remove_all(dat$V1, 'DO=|FU=|HB=|CB=|NB=|DU=|SG=|HTEMP=|MV=|DCT|SB= [0-9]+|SB=[0-9]+|FBIN=|PBIN=|TAG=|PS|ACT')
+  dat$V1 <- str_remove_all(dat$V1, 'DO=|FU=|HB=|CB=|NB=|DU=|SG=|HTEMP=|MV=|DCT|SB= [0-9]+|SB=[0-9]+|SB=  [0-9]+|ns|FBIN=|PBIN=|TAG=|PS|ACT')
   dat$V1 <- str_replace_all(dat$V1, '\\s+:', ':')
   dat$V1 <- str_replace_all(dat$V1, ':\\s+', ':')
   dat$V1 <- str_replace_all(dat$V1, '\\s+', ' ')
+
   
   ns <- str_count(dat$V1[1], ' ')
   
@@ -163,12 +159,13 @@ dat_fin <- function(dat){
 
   dat <- dat %>% 
     filter(test < max_test & HB %in% c(1:4)|test == max_test) %>% 
-    filter(HB != 7 & HB != 8) %>% 
+    filter(HB != 7 & HB != 8 & HB != 0) %>% 
     mutate(tPD = as.numeric(tPD),
            NB_L = ifelse(NB == 0, 0, 1),
            tPD_R = round(tPD, 0),
            x = as.numeric(x),
-           y = as.numeric(y))
+           y = as.numeric(y)) %>%
+    filter(tPD != 0)
   
   HTEMP <- as.numeric(str_split_fixed(dat$HTEMP, ':', 3)[, 1])
   
@@ -275,7 +272,9 @@ tPDRUN_plot <- function(dat){
     filter(tPD >= 40 & run %in% run_16$run) %>% 
     group_by(x, y, run) %>% 
     summarise(tPD = mean(tPD),
-              .groups = 'drop') 
+	      n = n(),
+              .groups = 'drop') %>%
+    arrange(desc(n))
   
   xmax <- max(WFmap_tPD$x, na.rm = T)
   xmin <- min(WFmap_tPD$x, na.rm = T)
@@ -324,8 +323,10 @@ MAPRUN_plot <- function(dat){
     filter(run %in% run_16$run) %>% 
     group_by(x, y, run) %>% 
     summarise(NB = sum(NB_L),
+	      n = n(),
               .groups = 'drop') %>% 
-    mutate(NB = ifelse(NB == 0, 0, 1))
+    mutate(NB = ifelse(NB == 0, 0, 1)) %>%
+    arrange(desc(n))
   
   xmax <- max(WFmap$x, na.rm = T)
   xmin <- min(WFmap$x, na.rm = T)
