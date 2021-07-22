@@ -25,18 +25,24 @@ dat <- rbindlist(dat) %>%
 prime <- dat %>% filter(test == 0 & HB %in% c(1:4))
 retest <- dat %>% filter(test == 1 & HB %in% c(1:6))
 
-fin <- rbind(prime, retest)
-fin <- split(fin, fin$run)
-
+dat <- rbind(prime, retest)
+dat <- split(dat, dat$run)
 dat_list <- list()
-for(i in 1:length(fin)){
+for(i in 1:length(dat)){
   
-  dat_list[[i]] <- split(fin[[i]], fin[[i]]$wf)
+  dat_list[[i]] <- split(dat[[i]], dat[[i]]$wf)
   
 }
 
-# 3. Simulation -----------------------------------------------------------
 
-result <- get_result(dat_list, 'edge', 4)
-table(result$pkg)
+### Simulation ----
 
+result <- get_result(dat_list, 'edge', 3)
+result2 <- result %>% 
+  group_by(pkg) %>% 
+  summarise(NB_L = ifelse(sum(NB_L) == 0, 0, 1)) %>%
+  filter(!pkg %in% c(paste0('etc_E', 1:9), 'etc_center')) %>% 
+  mutate(edge = str_split_fixed(pkg, '_', 3)[, 2]) %>% 
+  group_by(edge) %>% 
+  summarise(n = n(),
+            YLD = 1 - mean(NB_L))
