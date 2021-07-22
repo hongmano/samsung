@@ -49,7 +49,7 @@ if(lscl == 'n'){
     
     header <- file_list[str_detect(file_list, 'HEADER')] %>% read.header()
     test <- file_list[str_detect(file_list, '_00|_01|_02')] %>% read.test()
-test$lot
+
     dat <- test %>% 
       inner_join(header, by = 'lot') %>%
       unique()
