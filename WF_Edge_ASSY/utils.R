@@ -31,6 +31,7 @@ ETC_ASSY1 <- function(dat, DP){
     
   }else{
     
+    dat <- dat[sample(nrow(dat)), ]
     pkg <- c(rep(paste('etc', dat$edge, 1:n1, sep = '_') %>% unique, each = DP), rep(paste('etc', dat$edge, sep = '_') %>% unique, n2))
     dat$pkg <- pkg
     
@@ -68,7 +69,7 @@ result1 <- function(dat, way, DP){
   if(way == 'edge'){
     
     dat <- lapply(dat, function(x){EDGE_ASSY(x, DP)}) %>% rbindlist()
-  
+    
   }
   
   return(dat)
@@ -76,7 +77,7 @@ result1 <- function(dat, way, DP){
 }
 
 result2 <- function(dat, way, DP){
-
+  
   fin <- lapply(dat, function(x){result1(x, way, DP)}) %>% rbindlist()
   
   etc <- fin %>% filter(substr(pkg, 1, 3) == 'etc')
@@ -84,10 +85,11 @@ result2 <- function(dat, way, DP){
   etc <- lapply(etc, function(x){ETC_ASSY1(x, DP)}) %>% rbindlist()
   
   fin <- fin %>% filter(substr(pkg, 1, 3) != 'etc') %>% rbind(etc)
-
-  return(fin)
-}
   
+  return(fin)
+  
+}
+
 get_result <- function(dat, way, DP){
   
   fin <- lapply(dat, function(x){result2(x, way, DP)}) %>% rbindlist()
