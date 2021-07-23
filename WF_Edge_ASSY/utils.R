@@ -81,7 +81,7 @@ result2 <- function(dat, way, DP){
   
   etc <- fin %>% filter(substr(pkg, 1, 3) == 'etc')
   etc <- split(etc, etc$edge)
-  etc <- lapply(etc, function(x){ETC_ASSY(x, DP)}) %>% rbindlist()
+  etc <- lapply(etc, function(x){ETC_ASSY1(x, DP)}) %>% rbindlist()
   
   fin <- fin %>% filter(substr(pkg, 1, 3) != 'etc') %>% rbind(etc)
 
