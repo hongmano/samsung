@@ -57,6 +57,7 @@ read.test <- function(files){
              lot = str_split_fixed(files[i], '_', 5)[3])
     
     colnames(dat_list[[i]])[tPD_location] <- 'tPD'
+    dat_list[[i]]$tPD <- as.numeric(dat_list[[i]]$tPD)
     
     file.remove(files[i])
     
@@ -64,7 +65,9 @@ read.test <- function(files){
   }else{
     
     for(i in 1:length(files)){
-      
+
+      tPD_location <- ifelse(substr(files[i], 1, 10) %in% mypart, 9, 11)
+
       dat_list[[i]] <- fread(files[i], sep = '', header = T) %>% 
         na.omit() %>% 
         `colnames<-`('V1') %>% 
@@ -72,7 +75,10 @@ read.test <- function(files){
         select('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP') %>% 
         mutate(test = substr(str_split_fixed(files[i], '_', 5)[5], 1, 2),
                lot = str_split_fixed(files[i], '_', 5)[3])
-      
+
+       colnames(dat_list[[i]])[tPD_location] <- 'tPD'
+       dat_list[[i]]$tPD <- as.numeric(datlist[[i]]$tPD)
+
       file.remove(files[i])
     
     }
@@ -165,7 +171,7 @@ dat_fin <- function(dat){
            tPD_R = round(tPD, 0),
            x = as.numeric(x),
            y = as.numeric(y)) %>%
-    filter(tPD != 0)
+    filter(tPD > 30)
   
   HTEMP <- as.numeric(str_split_fixed(dat$HTEMP, ':', 3)[, 1])
   
@@ -407,5 +413,23 @@ DUTMAP <- function(dat){
     theme_bw()
   
   ggsave('DUTMAP.jpeg')
+  
+  ggplot(dat, 
+         aes(x = DU, 
+             y = cycle)) +
+    
+    geom_tile(aes(fill = HTEMP), 
+              show.legend = T,
+              na.rm = F,
+              color = 'black') +
+    
+    labs(y = "cycle") +
+    scale_x_discrete(position = "top") +
+    scale_y_discrete(limits = rev(levels(dat$cycle))) + 
+    scale_fill_gradient(high = 'red', low = 'yellow') + 
+    facet_grid(~lot) + 
+    theme_bw()
+  
+  ggsave('TEMPMAP.jpeg')
   
 }
