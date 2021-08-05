@@ -1,11 +1,10 @@
 # 1. Packages / Option ----------------------------------------------------
 
-options(warn = -1)
+
 if(!suppressMessages(require(dplyr))){install.packages('dplyr')}; require(dplyr)
 if(!suppressMessages(require(stringr))){install.packages('stringr')}; require(stringr)
 if(!suppressMessages(require(data.table))){install.packages('data.table')}; require(data.table)
 if(!suppressMessages(require(broman))){install.packages('broman')}; require(broman)
-
 
 # 2. Data Loading ---------------------------------------------------------
 
@@ -19,7 +18,11 @@ dat <- read.table(files, header = T)
 dat[dat == '0x'] <- 0
 dat[dat == '1x'] <- 1
 
-# 3. EPIC Setting -----------------------------------------------------------
+
+
+# 3. Epic Setting ---------------------------------------------------------
+
+# 3-1. Command
 
 dat <- dat %>% 
   mutate(CMDA = paste0(CS0A, CA0A, CA1A, CA2A, CA3A, CA4A, CA5A, CA6A),
@@ -47,36 +50,28 @@ dat <- dat %>%
                                                                                                                                                                   ifelse(substr(CMDA, 1, 8) == '10000101', 'RDC', '?'))))))))))))))))))))))) %>% 
   mutate(cycle = 1)
 
+# CMD 
+for(i in 1:(nrow(dat)/4)){dat$CMD[(i*4-1):(i*4)] <- dat$CMD[(i*4-3):(i*4-2)]}
+# Cycle Increase
+for(i in 2:nrow(dat)){dat$cycle[i] <- ifelse(dat$CMD[i] == dat$CMD[i-1], dat$cycle[i-1], dat$cycle[i-1] + 1)}
 
-for(i in 1:(nrow(dat)/4)){
-  
-  dat$CMD[(i*4-1):(i*4)] <- dat$CMD[(i*4-3):(i*4-2)]
-  
-}
-
-for(i in 2:nrow(dat)){
-  
-  dat$cycle[i] <- ifelse(dat$CMD[i] == dat$CMD[i-1], dat$cycle[i-1], dat$cycle[i-1] + 1)
-  
-}
+# 3-2. 
+# test : CMDA by Cycle
+# CS~CA6 by cycle, if cycle has only one unique CMDA, repeat it, else just join it
 
 test <- dat %>% select(cycle, CMDA) %>% unique
 test <- split(test, test$cycle)
-
-for(i in 1:length(test)){
-  
-  test[[i]]$CMDA <- ifelse(nrow(test[[i]]) == 1, paste0(test[[i]]$CMDA[1], test[[i]]$CMDA[1]), paste0(test[[i]]$CMDA[1], test[[i]]$CMDA[2]))
-  
-}
-
+for(i in 1:length(test)){test[[i]]$CMDA <- ifelse(nrow(test[[i]]) == 1, paste0(test[[i]]$CMDA[1], test[[i]]$CMDA[1]), paste0(test[[i]]$CMDA[1], test[[i]]$CMDA[2]))}
 test <- rbindlist(test) %>% unique
 dat <- dat %>% select(-CMDA) %>% inner_join(test)
+rm(test)
 
+# 3-3. ADDR
 
 dat <- dat %>% 
   mutate( BA0 = ifelse(CMD %in% c('ACT-1', 'PRE', 'REF', 'MWR', 'WR(16)', 'WR32', 'RD(16)', 'RD32'), substr(CMDA, 10, 10), 0) %>% as.numeric(),
-          BA1 = ifelse(CMD %in% c('ACT-1', 'PRE', 'REF', 'MWR', 'WR(16)', 'WR32', 'RD', 'RD32'), substr(CMDA, 11, 11), 0) %>% as.numeric(),
-          BA2 = ifelse(CMD %in% c('ACT-1', 'PRE', 'REF', 'MWR', 'WR(16)', 'WR32', 'RD', 'RD32'), substr(CMDA, 12, 12), 0) %>% as.numeric(),
+          BA1 = ifelse(CMD %in% c('ACT-1', 'PRE', 'REF', 'MWR', 'WR(16)', 'WR32', 'RD(16)', 'RD32'), substr(CMDA, 11, 11), 0) %>% as.numeric(),
+          BA2 = ifelse(CMD %in% c('ACT-1', 'PRE', 'REF', 'MWR', 'WR(16)', 'WR32', 'RD(16)', 'RD32'), substr(CMDA, 12, 12), 0) %>% as.numeric(),
           BA3 = ifelse(CMD %in% c('ACT-1', 'PRE', 'MWR', 'WR(16)', 'WR32', 'RD(16)', 'RD32'), substr(CMDA, 13, 13), 0) %>% as.numeric(),
           
           BG0 = ifelse(CMD %in% c('ACT-1', 'PRE', 'REF', 'MWR', 'WR(16)', 'WR32', 'RD(16)', 'RD32'), substr(CMDA, 12, 12), 0) %>% as.numeric(),
@@ -151,7 +146,8 @@ dat <- dat %>%
           
           BANKG = ifelse(CMD %in% c('ACT-1', 'MWR', 'WR(16)', 'WR32', 'RD(16)', 'RD32'), BG0 + BG1*2,
                          ifelse(paste0(CMD, AB) %in% c('PRE1', 'REF1'), 'ALL',
-                                ifelse(paste0(CMD, AB) %in% c('PRE0', 'REF0'), BA0 + BA1*2, 0))),
+                                ifelse(paste0(CMD, AB) == 'PRE0', BG0 + BG1*2,
+                                       ifelse(paste0(CMD, AB) == 'REF0', BG0, 0)))),
           
           R = ifelse(CMD == 'ACT-1', (R11*2^11 + R12*2^12 + R13*2^13 + R14*2^14 + R15*2^15 + R16*2^16 + R17*2^17),
                      ifelse(CMD == 'ACT-2', (R0 + R1*2 + R2*2^2 + R3*2^3 + R4*2^4 + R5*2^5 + R6*2^6 + R7*2^7 + R8*2^8 + R9*2^9 + R10*2^10), 0)),
@@ -166,86 +162,89 @@ dat <- dat %>%
           
           BANK = ifelse(BANK == 'ALL', 'ALL', paste0(BANK, BANKG))
           
-          )
+  )
+
+# Statrs with First ACTIVE
 
 dat <- dat[which(dat$CMD == 'ACT-1')[1]:nrow(dat), ]
+
+# if cycle has only one unique CMDA, repeat it, else just join it
 
 epic_fin <- dat %>% 
   group_by(CMD, cycle) %>% 
   tally %>% 
   arrange(cycle)
 
-one <- dat %>% select(cycle, CMD, CMDA, BANK, R, C) %>% unique %>% group_by(cycle) %>% tally %>% filter(n == 1) %>% select(cycle) %>% unlist
-two <- dat %>% select(cycle, CMD, CMDA, BANK, R, C) %>% unique %>% group_by(cycle) %>% tally %>% filter(n == 2) %>% select(cycle) %>% unlist
-
-epic_addr <- dat %>% select(cycle, CMD, CMDA, BANK, R, C)
-
-# epic_addr <- dat %>% select(cycle, CMD, CMDA, BANK, BANKG, X, Y) %>% unique %>% filter(cycle %in% one) %>% 
-#   rbind(dat %>% select(cycle, CMD, CMDA, BANK, BANKG, X, Y) %>% unique %>% filter(cycle %in% one)) %>% 
-#   rbind(dat %>% select(cycle, CMD, CMDA, BANK, BANKG, X, Y) %>% unique %>% filter(cycle %in% one)) %>% 
-#   rbind(dat %>% select(cycle, CMD, CMDA, BANK, BANKG, X, Y) %>% unique %>% filter(cycle %in% one)) %>% 
-#   rbind(dat %>% select(cycle, CMD, CMDA, BANK, BANKG, X, Y) %>% unique %>% filter(cycle %in% two)) %>% 
-#   rbind(dat %>% select(cycle, CMD, CMDA, BANK, BANKG, X, Y) %>% unique %>% filter(cycle %in% two)) %>% 
-#   arrange(cycle)
-
+epic_addr <- dat %>% select(cycle, CMD, CMDA, BANK, R, C, AB, AP)
 epic_fin <- epic_fin %>% inner_join(epic_addr, by = c('cycle', 'CMD'))
+epic_fin$cycle <- epic_fin$cycle - min(epic_fin$cycle) + 1
+
+rm(epic_addr)
+
+# ADDR sum
 
 epic_fin$cycle_n <- 1
-
-for(i in 2:nrow(epic_fin)){
-  
-  epic_fin$cycle_n[i] <- ifelse(substr(epic_fin$CMD[i], 1, 3) == substr(epic_fin$CMD[i-1], 1, 3), epic_fin$cycle_n[i-1], epic_fin$cycle_n[i-1] + 1)
-  
-}
+for(i in 2:nrow(epic_fin)){epic_fin$cycle_n[i] <- ifelse(substr(epic_fin$CMD[i], 1, 3) == substr(epic_fin$CMD[i-1], 1, 3), epic_fin$cycle_n[i-1], epic_fin$cycle_n[i-1] + 1)}
 
 epic_fin <- epic_fin %>% 
-  select(-c(R, C)) %>% 
-  inner_join(epic_fin %>%  
-               mutate(CMD = substr(CMD, 1, 2)) %>% 
+  select(-c(R, C, AB, AP)) %>% 
+  inner_join(epic_fin %>%
                group_by(cycle_n) %>% 
                summarise(R = paste0('0x', dec2hex(sum(R / 4))),
-                         C = paste0('0x', dec2hex(sum(C / 4)))), by = 'cycle_n') %>% 
-  select(-cycle) %>% 
-  rename(cycle = cycle_n) %>% 
+                         C = ifelse(sum(C) == 0, '0x0', paste0('0x', dec2hex(sum(C / 4)), '0')),
+                         AB = unique(AB),
+                         AP = unique(AP)), by = 'cycle_n') %>% 
+
   mutate(R = ifelse(substr(CMD, 1, 2) %in% c('AC', 'WR', 'RD', 'MW'), R, NA),
          C = ifelse(substr(CMD, 1, 2) %in% c('AC', 'WR', 'RD', 'MW'), C, NA),
-         BANK = ifelse(substr(CMD, 1, 2) %in% c('AC', 'WR', 'RD', 'MW'), BANK, NA))
+         BANK = ifelse(substr(CMD, 1, 2) %in% c('AC', 'WR', 'RD', 'MW', 'PR', 'RE'), BANK, NA))
 
-for(i in 1:(nrow(epic_fin)/8)){
-  
-  epic_fin$BANK[(i*8-3):(i*8)] <- epic_fin$BANK[(i*8-7):(i*84)]
-  
-}
+act_1 <- epic_fin %>% filter(CMD == 'ACT-1') %>% select(CMD, R, C, BANK, AB, AP, cycle_n) %>% unique
+act_2 <- epic_fin %>% filter(CMD == 'ACT-2') %>% select(CMD, R, C, BANK, AB, AP, cycle_n) %>% unique
+wr_rd <- epic_fin %>% filter(substr(CMD, 1, 2) %in% c('WR', 'RD')) %>% select(CMD, R, C, BANK, AB, AP, cycle_n) %>% unique
+pr_re <- epic_fin %>% filter(substr(CMD, 1, 2) %in% c('PR', 'RE')) %>% select(CMD, R, C, BANK, AB, AP, cycle_n) %>% unique
+
+wr_rd$R <- act_1$R
+act_2$BANK <- act_1$BANK
 
 epic_fin <- epic_fin %>% 
-  mutate(BANK = ifelse(substr(CMD, 1, 2) %in% c('AC', 'WR', 'RD', 'MW'), BANK, NA))
+  select(-c(BANK, R, C, AB, AP)) %>% 
+  left_join(rbind(act_1, act_2, wr_rd, pr_re), by = c('CMD', 'cycle_n'))
+
+epic_fin$DQ_E <- paste0('0x', substr(dat$DQ_E, 2, 6))
+epic_fin$DQ_O <- paste0('0x', substr(dat$DQ_O, 2, 6))
+
+rm(act_1, act_2, wr_rd, pr_re)
 
 
-# 4. ADVAN Setting --------------------------------------------------------
+# 4. Advan Setting --------------------------------------------------------
 
-advan <- fread('C:\\Users\\mano.hong\\Desktop\\T5511\\ADC.csv') %>%
-  mutate(cycle = 1) %>% 
-  select(CMD, ROW, COLA, BANK)
+advan <- fread('C:\\Users\\mano.hong\\Desktop\\T5511\\ADC.csv')
+advan[advan == '-'] <- NA
 
-test <- epic_fin %>% 
-  select(CMD, R, C, BANK) %>% 
-  rename(ROW = R,
-         COLA = C)
+advan <- advan %>% 
+  mutate(C = ifelse(substr(CMD, 1, 2) == 'AC', '0x0', C))
 
-table(advan$CMD == test$CMD)
+advan$cycle <- 1
+advan$cycle_n <- 1
+for(i in 2:nrow(advan)){advan$cycle[i] <- ifelse(advan$CMD[i] == advan$CMD[i-1], advan$cycle[i-1], advan$cycle[i-1] + 1)}
+for(i in 2:nrow(advan)){advan$cycle_n[i] <- ifelse(substr(advan$CMD[i], 1, 3) == substr(advan$CMD[i-1], 1, 3), advan$cycle_n[i-1], advan$cycle_n[i-1] + 1)}
 
-for(i in 2:nrow(advan)){
+advan <- advan %>% 
+  select(-c(R, C, BANK)) %>% 
+  left_join(advan %>%
+              group_by(cycle_n) %>% 
+              summarise(R = unique(R),
+                        C = unique(C),
+                        BANK = unique(BANK)) %>%
+  filter(is.na(BANK) != T), by = 'cycle_n')
 
-  advan$cycle[i] <- ifelse(advan$CMD[i] == advan$CMD[i-1], advan$cycle[i-1], advan$cycle[i-1] + 1)
+# Done --------------------------------------------------------------------
 
-}
+aa <- advan %>% group_by(cycle, CMD, R, C, BANK) %>% tally
+ee <- epic_fin %>% group_by(cycle, CMD, R, C, BANK, CMDA) %>% tally
 
-advan_fin <- advan %>%
-  group_by(CMD, cycle) %>%
-  tally %>%
-  arrange(cycle)
-
-
-# 5. CMD_FIN --------------------------------------------------------------
-
-
+table(aa$CMD == ee$CMD)
+table(aa$R == ee$R)
+table(aa$C == ee$C)
+table(aa$BANK == ee$BANK)
