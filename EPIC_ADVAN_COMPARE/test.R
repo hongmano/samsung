@@ -183,33 +183,33 @@ rm(epic_addr)
 
 # ADDR sum
 
-epic_fin$cycle_n <- 1
-for(i in 2:nrow(epic_fin)){epic_fin$cycle_n[i] <- ifelse(substr(epic_fin$CMD[i], 1, 3) == substr(epic_fin$CMD[i-1], 1, 3), epic_fin$cycle_n[i-1], epic_fin$cycle_n[i-1] + 1)}
+epic_fin$cycle_a <- 1
+for(i in 2:nrow(epic_fin)){epic_fin$cycle_a[i] <- ifelse(substr(epic_fin$CMD[i], 1, 3) == substr(epic_fin$CMD[i-1], 1, 3), epic_fin$cycle_a[i-1], epic_fin$cycle_a[i-1] + 1)}
 
 epic_fin <- epic_fin %>% 
   select(-c(R, C, AB, AP)) %>% 
   inner_join(epic_fin %>%
-               group_by(cycle_n) %>% 
+               group_by(cycle_a) %>% 
                summarise(R = paste0('0x', dec2hex(sum(R / 4))),
                          C = ifelse(sum(C) == 0, '0x0', paste0('0x', dec2hex(sum(C / 4)), '0')),
                          AB = unique(AB),
-                         AP = unique(AP)), by = 'cycle_n') %>% 
+                         AP = unique(AP)), by = 'cycle_a') %>% 
 
   mutate(R = ifelse(substr(CMD, 1, 2) %in% c('AC', 'WR', 'RD', 'MW'), R, NA),
          C = ifelse(substr(CMD, 1, 2) %in% c('AC', 'WR', 'RD', 'MW'), C, NA),
          BANK = ifelse(substr(CMD, 1, 2) %in% c('AC', 'WR', 'RD', 'MW', 'PR', 'RE'), BANK, NA))
 
-act_1 <- epic_fin %>% filter(CMD == 'ACT-1') %>% select(CMD, R, C, BANK, AB, AP, cycle_n) %>% unique
-act_2 <- epic_fin %>% filter(CMD == 'ACT-2') %>% select(CMD, R, C, BANK, AB, AP, cycle_n) %>% unique
-wr_rd <- epic_fin %>% filter(substr(CMD, 1, 2) %in% c('WR', 'RD')) %>% select(CMD, R, C, BANK, AB, AP, cycle_n) %>% unique
-pr_re <- epic_fin %>% filter(substr(CMD, 1, 2) %in% c('PR', 'RE')) %>% select(CMD, R, C, BANK, AB, AP, cycle_n) %>% unique
+act_1 <- epic_fin %>% filter(CMD == 'ACT-1') %>% select(CMD, R, C, BANK, AB, AP, cycle_a) %>% unique
+act_2 <- epic_fin %>% filter(CMD == 'ACT-2') %>% select(CMD, R, C, BANK, AB, AP, cycle_a) %>% unique
+wr_rd <- epic_fin %>% filter(substr(CMD, 1, 2) %in% c('WR', 'RD')) %>% select(CMD, R, C, BANK, AB, AP, cycle_a) %>% unique
+pr_re <- epic_fin %>% filter(substr(CMD, 1, 2) %in% c('PR', 'RE')) %>% select(CMD, R, C, BANK, AB, AP, cycle_a) %>% unique
 
 wr_rd$R <- act_1$R
 act_2$BANK <- act_1$BANK
 
 epic_fin <- epic_fin %>% 
   select(-c(BANK, R, C, AB, AP)) %>% 
-  left_join(rbind(act_1, act_2, wr_rd, pr_re), by = c('CMD', 'cycle_n'))
+  left_join(rbind(act_1, act_2, wr_rd, pr_re), by = c('CMD', 'cycle_a'))
 
 epic_fin$DQ_E <- paste0('0x', substr(dat$DQ_E, 2, 6))
 epic_fin$DQ_O <- paste0('0x', substr(dat$DQ_O, 2, 6))
@@ -226,18 +226,18 @@ advan <- advan %>%
   mutate(C = ifelse(substr(CMD, 1, 2) == 'AC', '0x0', C))
 
 advan$cycle <- 1
-advan$cycle_n <- 1
+advan$cycle_a <- 1
 for(i in 2:nrow(advan)){advan$cycle[i] <- ifelse(advan$CMD[i] == advan$CMD[i-1], advan$cycle[i-1], advan$cycle[i-1] + 1)}
-for(i in 2:nrow(advan)){advan$cycle_n[i] <- ifelse(substr(advan$CMD[i], 1, 3) == substr(advan$CMD[i-1], 1, 3), advan$cycle_n[i-1], advan$cycle_n[i-1] + 1)}
+for(i in 2:nrow(advan)){advan$cycle_a[i] <- ifelse(substr(advan$CMD[i], 1, 3) == substr(advan$CMD[i-1], 1, 3), advan$cycle_a[i-1], advan$cycle_a[i-1] + 1)}
 
 advan <- advan %>% 
   select(-c(R, C, BANK)) %>% 
   left_join(advan %>%
-              group_by(cycle_n) %>% 
+              group_by(cycle_a) %>% 
               summarise(R = unique(R),
                         C = unique(C),
                         BANK = unique(BANK)) %>%
-  filter(is.na(BANK) != T), by = 'cycle_n')
+  filter(is.na(BANK) != T), by = 'cycle_a')
 
 # Done --------------------------------------------------------------------
 
