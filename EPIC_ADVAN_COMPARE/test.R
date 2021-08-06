@@ -38,16 +38,19 @@ dat <- dat %>%
                                                                               ifelse(substr(CMDA, 1, 5) == '10010', 'WR32',
                                                                                      ifelse(substr(CMDA, 1, 4) == '1100', 'RD(16)',
                                                                                             ifelse(substr(CMDA, 1, 4) == '1101', 'RD32',
-                                                                                                   ifelse(substr(CMDA, 1, 5) == '10011', 'CAS-DUM',
-                                                                                                          ifelse(substr(CMDA, 1, 7) == '1000011', 'MPC',
-                                                                                                                 ifelse(substr(CMDA, 1, 8) == '10001011', 'SRE',
-                                                                                                                        ifelse(substr(CMDA, 1, 8) == '10001010', 'SRX',
-                                                                                                                               ifelse(substr(CMDA, 1, 8) == '10001101', 'MRW-1',
-                                                                                                                                      ifelse(substr(CMDA, 1, 7) == '1000100', 'MRW-2',
-                                                                                                                                             ifelse(substr(CMDA, 1, 8) == '10001100', 'MRR',
-                                                                                                                                                    ifelse(substr(CMDA, 1, 8) == '10000011', 'WFF',
-                                                                                                                                                           ifelse(substr(CMDA, 1, 8) == '10000010', 'RFF',
-                                                                                                                                                                  ifelse(substr(CMDA, 1, 8) == '10000101', 'RDC', '?'))))))))))))))))))))))) %>% 
+                                                                                                   ifelse(substr(CMDA, 1, 5) == '10011100', 'CAS-WR',
+                                                                                                          ifelse(substr(CMDA, 1, 8) == '10011010', 'CAS-RD',
+                                                                                                                 ifelse(substr(CMDA, 1, 8) == '10011001', 'CAS-FAST',
+                                                                                                                        ifelse(substr(CMDA, 1, 8) == '10011000', 'CAS-DUM',
+                                                                                                                               ifelse(substr(CMDA, 1, 7) == '1000011', 'MPC',
+                                                                                                                                      ifelse(substr(CMDA, 1, 8) == '10001011', 'SRE',
+                                                                                                                                             ifelse(substr(CMDA, 1, 8) == '10001010', 'SRX',
+                                                                                                                                                    ifelse(substr(CMDA, 1, 8) == '10001101', 'MRW-1',
+                                                                                                                                                           ifelse(substr(CMDA, 1, 7) == '1000100', 'MRW-2',
+                                                                                                                                                                  ifelse(substr(CMDA, 1, 8) == '10001100', 'MRR',
+                                                                                                                                                                         ifelse(substr(CMDA, 1, 8) == '10000011', 'WFF',
+                                                                                                                                                                                ifelse(substr(CMDA, 1, 8) == '10000010', 'RFF',
+                                                                                                                                                                                       ifelse(substr(CMDA, 1, 8) == '10000101', 'RDC', '?')))))))))))))))))))))))))) %>% 
   mutate(cycle = 1)
 
 # CMD 
