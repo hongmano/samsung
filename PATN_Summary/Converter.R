@@ -8,12 +8,12 @@ if(!suppressMessages(require(broman))){install.packages('broman')}; require(brom
 
 # 2. Data Loading ---------------------------------------------------------
 
-setwd('C:\\Users\\mano.hong\\Desktop\\PROJECT\\21. 07. LP5 Command Converter\\old_ver')
+setwd('C:\\Users\\mano.hong\\Desktop\\PROJECT\\21. 07. LP5 Command Converter')
 files <- list.files()
 files <- files[str_detect(files, c('.txt'))]
 files <- files[str_detect(files, c('ADC'))]
 
-dat <- read.table(files, header = T) 
+dat <- read.table(files[3], header = T) 
 
 dat[dat == '0x'] <- 0
 dat[dat == '1x'] <- 1
@@ -53,9 +53,13 @@ dat <- dat %>%
                                                                                                                                                                                        ifelse(substr(CMDA, 1, 8) == '10000101', 'RDC', '?')))))))))))))))))))))))))) %>% 
   mutate(cycle = 1)
 
+
 # CMD 
+
 for(i in 1:(nrow(dat)/4)){dat$CMD[(i*4-1):(i*4)] <- dat$CMD[(i*4-3):(i*4-2)]}
+
 # Cycle Increase
+
 for(i in 2:nrow(dat)){dat$cycle[i] <- ifelse(dat$CMD[i] == dat$CMD[i-1], dat$cycle[i-1], dat$cycle[i-1] + 1)}
 
 # 3-2. 
