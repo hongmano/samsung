@@ -42,7 +42,7 @@ get_cmd <- function(patn_list){
                                                                                                 ifelse(substr(CMDA, 1, 4) == '1101', 'RD32',
                                                                                                        ifelse(substr(CMDA, 1, 8) == '10011100', 'CAS-WR',
                                                                                                               ifelse(substr(CMDA, 1, 8) == '10011010', 'CAS-RD',
-                                                                                                                     ifelse(substr(CMDA, 1, 8) == '10011001', 'CAS-FAST',
+                                                                                                                     ifelse(substr(CMDA, 1, 8) == '10011001', 'CAS-FS',
                                                                                                                             ifelse(substr(CMDA, 1, 8) == '10011000', 'CAS-DUM',
                                                                                                                                    ifelse(substr(CMDA, 1, 7) == '1000011', 'MPC',
                                                                                                                                           ifelse(substr(CMDA, 1, 8) == '10001011', 'SRE',
@@ -146,7 +146,7 @@ get_addr <- function(patn_list){
               WS_FS = ifelse(CMD == 'CAS-DUM', substr(CMDA, 8, 8), 0) %>% as.numeric(),
               WRX = ifelse(CMD == 'CAS-DUM', substr(CMDA, 14, 14), 0) %>% as.numeric(),
               WXSA = ifelse(CMD == 'CAS-DUM', substr(CMDA, 15, 15), 0) %>% as.numeric(),
-              WXSB = ifelse(CMD == 'CAS-DUM', substr(CMDA, 16, 16), 0) %>% as.numeric(),
+              WXSB_B3 = ifelse(CMD == 'CAS-DUM', substr(CMDA, 16, 16), 0) %>% as.numeric(),
 
               OP0 = ifelse(CMD %in% c('MPC', 'MRW-2'), substr(CMDA, 10, 10), 0) %>% as.numeric(),
               OP1 = ifelse(CMD %in% c('MPC', 'MRW-2'), substr(CMDA, 11, 11), 0) %>% as.numeric(),
@@ -208,7 +208,7 @@ get_addr <- function(patn_list){
 }
 
 
-# 4. Arrange ADDR ---------------------------------------------------------
+# 4. Arrange ADDR + CAS ---------------------------------------------------------
 
 arrange_addr <- function(patn_list){
 
@@ -231,8 +231,6 @@ arrange_addr <- function(patn_list){
       select(CMD, BANK, C, cycle, cycle_precharge) %>%
       inner_join(act %>% select(BANK, R, cycle_precharge)) %>%
       unique
-
-    # CAS
 
     # PRE / REF
 
@@ -257,6 +255,18 @@ arrange_addr <- function(patn_list){
 
 }
 
+cas_dummy <- function(patn_list){
+
+  cas <- function(patn){
+    
+    patn <- patn$epic
+    cas <- patn %>% filter(CMD %in% c('CAS-DUM', 'RD(16)', 'RD32', 'WR(16)', 'WR32'))
+    
+    
+  }
+  
+  
+}
 
 # 5. Summary --------------------------------------------------------------
 
