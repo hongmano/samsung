@@ -6,7 +6,7 @@ if(!suppressMessages(require(stringr))){install.packages('stringr')}; require(st
 if(!suppressMessages(require(data.table))){install.packages('data.table')}; require(data.table)
 if(!suppressMessages(require(ggplot2))){install.packages('ggplot2')}; require(ggplot2)
 
-setwd('C:\\Users\\mano.hong\\Desktop\\MBTIDD\\')
+setwd('C:\\Users\\geonbo.park\\Desktop\\MBTIDD\\')
 cmd <- commandArgs()
 
 setwd(paste0('./', cmd[6]))
@@ -101,7 +101,8 @@ for(i in 1:length(dat_fin)){
       theme(legend.position = '',
             axis.text.y = element_text(size = 40),
             strip.text = element_text(size = 25),
-            axis.text.x = element_text(size = 0)) +
+            axis.text.x = element_text(size = 0),
+            panel.border = element_rect(size = 2, fill = NA)) +
       scale_color_manual(values = c('VDD1' = 'orange',
                                     'VDD2' = '#00A6D6')) +
       labs(x = '',
