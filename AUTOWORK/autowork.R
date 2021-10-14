@@ -66,7 +66,7 @@ if(lscl == 'n'){
     DUTMAP(dat)
 
   }
-  
+
   print('##### Data Save Done #####')
   print('##### END #####')
   
