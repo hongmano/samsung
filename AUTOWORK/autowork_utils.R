@@ -1,7 +1,8 @@
 # 0. PART
 
 mypart <- c('K4F8E3D4HF', 'K4F4E3S4HF', 'K4F4E6S4HF', # NU
-            'K4EBE304ED', 'K4E8E324ED', 'K4E6E304ED') # LC
+            'K4EBE304ED', 'K4E8E324ED', 'K4E6E304ED', #LC
+            'K4UBE3S4AM', 'K4UCE3D4AM') # KR
 
 
 # 1. READ HEADER ----------------------------------------------------------
@@ -71,13 +72,17 @@ read.test <- function(files){
       dat_list[[i]] <- fread(files[i], sep = '', header = T) %>% 
         na.omit() %>% 
         `colnames<-`('V1') %>% 
-        wrangling() %>%
-        select('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP') %>% 
+        wrangling()
+      
+      colnames(dat_list[[i]])[tPD_location] <- 'tPD'
+      
+      dat_list[[i]] <- dat_list[[i]] %>% 
+        select('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD') %>% 
         mutate(test = substr(str_split_fixed(files[i], '_', 5)[5], 1, 2),
                lot = str_split_fixed(files[i], '_', 5)[3])
 
        colnames(dat_list[[i]])[tPD_location] <- 'tPD'
-       dat_list[[i]]$tPD <- as.numeric(datlist[[i]]$tPD)
+       dat_list[[i]]$tPD <- as.numeric(dat_list[[i]]$tPD)
 
       file.remove(files[i])
     
@@ -219,7 +224,7 @@ NB_plot <- function(dat){
     filter(NB_L != 0) %>% 
     group_by(NB) %>% 
     tally() %>% 
-    arrange(desc(n)) %>% 
+    arrange(desc(n)) %>%
     head(10) %>% 
     ggplot(aes(x = reorder(NB, -n),
                y = n)) + 
@@ -379,6 +384,10 @@ DUTMAP <- function(dat){
     mutate(cycle = 1,
             HB_L = ifelse(HB %in% c(1:4), 'Good',
                           ifelse(HB %in% c(7:8), 'Env', 'Fail')))
+
+  HTEMP <- as.numeric(str_split_fixed(dat$HTEMP, ':', 3)[, 1])
+  
+  dat$HTEMP <- HTEMP
   
   dat <- split(dat, dat$lot)
   
@@ -408,7 +417,7 @@ DUTMAP <- function(dat){
     labs(y = "cycle") +
     scale_x_discrete(position = "top") +
     scale_y_discrete(limits = rev(levels(dat$cycle))) + 
-    scale_fill_manual(values = c('red', 'orange', 'blue')) +
+    scale_fill_manual(values = c('Env' = 'red', 'Fail' = 'orange', 'Good' = 'blue')) +
     facet_grid(~lot) + 
     theme_bw()
   
