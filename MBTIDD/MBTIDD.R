@@ -6,11 +6,10 @@ if(!suppressMessages(require(stringr))){install.packages('stringr')}; require(st
 if(!suppressMessages(require(data.table))){install.packages('data.table')}; require(data.table)
 if(!suppressMessages(require(ggplot2))){install.packages('ggplot2')}; require(ggplot2)
 
-setwd('C:\\Users\\geonbo.park\\Desktop\\MBTIDD\\')
+setwd('C:\\Users\\mano.hong\\Desktop\\MBTIDD\\')
 cmd <- commandArgs()
 
 setwd(paste0('./', cmd[6]))
-
 
 # 2. Data Loading ---------------------------------------------------------
 
@@ -29,7 +28,6 @@ for(i in 1:length(files)){
 
 # 3. Utils ----------------------------------------------------------------
 
-
 wrangling <- function(dat){
   
   w <- function(dat){
@@ -47,7 +45,7 @@ wrangling <- function(dat){
     dat <- dat[-1, ]
     
     dat <- dat %>%
-      select(Slot, BIB_ID, t_name, ends_with('_I'), )
+      select(Slot, BIB_ID, t_name, ends_with('_I'), TEST_CNT)
     
     dat[, 4:ncol(dat)] <- apply(dat[, 4:ncol(dat)], 2, as.numeric)
     dat$t <- 1:nrow(dat)
@@ -55,9 +53,11 @@ wrangling <- function(dat){
     if(system == 'DM1400CH'){
       
       dat <- dat %>%
-        mutate(VDD2 = PS1_I + PS2_I + PS3_I + PS4_I + PS5_I,
-               VDD1 = PS6_I + PS7_I) %>%
-        select(Slot, t_name, VDD1, VDD2, t) %>% 
+        mutate(VDD2 = PS1_I + PS2_I + PS3_I + PS4_I + PS5_I + PS6_I,
+               VDD2_DUT = (PS1_I + PS2_I + PS3_I + PS4_I + PS5_I + PS6_I) / TEST_CNT,
+               VDD1 = PS7_I + PS8_I,
+               VDD1_DUT = (PS7_I + PS8_I) / TEST_CNT) %>%
+        select(Slot, t_name, VDD1, VDD2, VDD1_DUT, VDD2_DUT, t) %>% 
         mutate(system = system,
                tester = tester,
                lot = lot)
@@ -65,8 +65,10 @@ wrangling <- function(dat){
       
       dat <- dat %>%
         mutate(VDD2 = PS1_I + PS2_I + PS3_I + PS4_I,
-               VDD1 = PS5_I) %>%
-        select(Slot, t_name, VDD1, VDD2, t) %>% 
+               VDD2_DUT = (PS1_I + PS2_I + PS3_I + PS4_I) / TEST_CNT,
+               VDD1 = PS5_I,
+               VDD1_DUT = PS5_I / TEST_CNT) %>%
+        select(Slot, t_name, VDD1, VDD2, VDD1_DUT, VDD2_DUT, t) %>% 
         mutate(system = system,
                tester = tester,
                lot = lot)
@@ -86,36 +88,62 @@ wrangling <- function(dat){
 dat_fin <- wrangling(dat_list)
 
 for(i in 1:length(dat_fin)){
+  
+  lot <- dat_fin[[i]]$lot %>% unique
+  system <- dat_fin[[i]]$system %>% unique
+  tester <- dat_fin[[i]]$tester %>% unique
+  
+  dat_fin[[i]] <- dat_fin[[i]] %>% 
+    select(-c(lot, system, tester)) %>% 
+    melt(id.vars = c('Slot', 't_name', 't'))
 
-    lot <- dat_fin[[i]]$lot %>% unique
-    system <- dat_fin[[i]]$system %>% unique
-    tester <- dat_fin[[i]]$tester %>% unique
+  a <- dat_fin[[i]] %>%
+    filter(variable %in% c('VDD1', 'VDD2')) %>% 
+    ggplot(aes(x = t, 
+               y = value, 
+               col = variable)) + 
+    geom_line(size = 1.5) + 
+    facet_wrap( ~ Slot, ncol = 2) + 
+    theme_bw() +
+    theme(legend.position = '',
+          axis.text.y = element_text(size = 40),
+          strip.text = element_text(size = 25),
+          axis.text.x = element_text(size = 0),
+          panel.border = element_rect(size = 2, fill = NA)) +
+    scale_color_manual(values = c('VDD1' = 'orange',
+                                  'VDD2' = '#00A6D6')) +
+    labs(x = '',
+         y = '')
+  
+  print(a)
+  ggsave(paste0(paste(system, tester, lot, sep = '_'), '.png'), scale = 5)
+  
+  a <- dat_fin[[i]] %>%
+    filter(variable %in% c('VDD1_DUT', 'VDD2_DUT')) %>% 
+    ggplot(aes(x = t, 
+               y = value, 
+               col = variable)) + 
+    geom_line(size = 1.5) + 
+    facet_wrap( ~ Slot, ncol = 2) + 
+    theme_bw() +
+    theme(legend.position = '',
+          axis.text.y = element_text(size = 40),
+          strip.text = element_text(size = 25),
+          axis.text.x = element_text(size = 0),
+          panel.border = element_rect(size = 2, fill = NA)) +
+    scale_color_manual(values = c('VDD1_DUT' = 'orange',
+                                  'VDD2_DUT' = '#00A6D6')) +
+    labs(x = '',
+         y = '')
+  
+  print(a)
+  ggsave(paste0(paste(system, tester, lot, sep = '_'), 'DUT.png'), scale = 5)
+  
+  
+  if(i == length(dat_fin)){
     
-    dat_fin[[i]] <- dat_fin[[i]] %>% select(-c(lot, system, tester)) %>% melt(id.vars = c('Slot', 't_name', 't'))
-    
-    a <- dat_fin[[i]] %>%
-      ggplot(aes(x = t, y = value, col = variable)) + 
-      geom_line(size = 1.5) + 
-      facet_wrap( ~ Slot, ncol = 2) + 
-      theme_bw() +
-      theme(legend.position = '',
-            axis.text.y = element_text(size = 40),
-            strip.text = element_text(size = 25),
-            axis.text.x = element_text(size = 0),
-            panel.border = element_rect(size = 2, fill = NA)) +
-      scale_color_manual(values = c('VDD1' = 'orange',
-                                    'VDD2' = '#00A6D6')) +
-      labs(x = '',
-           y = '')
-    
-    print(a)
-    ggsave(paste0(paste(system, tester, lot, sep = '_'), '.png'), scale = 5)
-
-
-    if(i == length(dat_fin)){
-      
-      print('##### END #####')
-    }
-    
+    print('##### END #####')
   }
+  
+}
 
