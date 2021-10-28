@@ -1,123 +1,121 @@
-# 0. PART
 
-mypart <- c('K4F8E3D4HF', 'K4F4E3S4HF', 'K4F4E6S4HF', # NU
-            'K4EBE304ED', 'K4E8E324ED', 'K4E6E304ED', #LC
-            'K4UBE3S4AM', 'K4UCE3D4AM') # KR
+#  Wrangling --------------------------------------------------------------
 
-
-# 1. READ HEADER ----------------------------------------------------------
-
-
-read.header <- function(files){
+wrangling <- function(files){
   
-  header_list <- list()
-  
-  for(i in 1:length(files)){
+  w <- function(file){
     
-    dat <- read.csv(files[i])
+    # Data Load
     
-    header_list[[i]] <- data.frame(
+    dat <- readLines(file)
+    
+    part <- regmatches(dat, regexpr('[A-Z0-9]+[-][A-Z0-9]+[-][A-Z0-9]+', dat))
+    part2 <- paste0(substr(part, 1, 10), substr(part, 23, 25))
+    step <- regmatches(dat, regexpr('T0[0-9][0-9][A-Z0-9]+', dat))
+    test_model <- substr(regmatches(dat, regexpr('TESTER_MODEL=[A-Z0-9]+', dat)), 14 , 100)
+    tester <- substr(regmatches(dat, regexpr('TESTER=[a-z0-9]+', dat)), 8 , 100)
+    
+    # Cycle
+    
+    rawdata <- as.data.frame(dat) %>% 
+      mutate(cycle = 1)
+    
+    cycle <- c(str_which(dat, 'LOADERSIDE'), nrow(rawdata))
+
+    for(i in 1:(length(cycle)-1)){
       
-      part = regmatches(dat$DOC_VER.5.0,regexpr('[A-Z0-9]+[-][A-Z0-9]+[-][A-Z0-9]+', dat$DOC_VER.5.0)),
-      step = regmatches(dat$DOC_VER.5.0,regexpr('T0[0-9][0-9][A-Z0-9]+', dat$DOC_VER.5.0)),
-      test_model = substr(regmatches(dat$DOC_VER.5.0,regexpr('TESTER_MODEL=[A-Z0-9]+', dat$DOC_VER.5.0)), 14 , 100),
-      tester = substr(regmatches(dat$DOC_VER.5.0,regexpr('TESTER=[a-z0-9]+', dat$DOC_VER.5.0)), 8 , 100),
-      lot = str_split_fixed(files[i], '_', 2)[1]
+      rawdata$cycle[cycle[i]:cycle[i+1]] <- i
       
-    )
-    
-    file.remove(files[i])
-      
-  }
-  
-  header_fin <- rbindlist(header_list)
-  
-  return(header_fin)
-  
-}
-
-
-# 2. READ TEST ------------------------------------------------------------
-
-
-read.test <- function(files){
-  
-  dat_list <- list()
-  
-  if(MSR == 'y'){
-  
-  for(i in 1:length(files)){
-      
-    tPD_location <- ifelse(substr(files[i], 1, 10) %in% mypart, 9, 11)
-    
-    dat_list[[i]] <- fread(files[i], sep = '', header = T) %>% 
-      na.omit() %>% 
-      `colnames<-`('V1') %>% 
-      wrangling() %>% 
-      mutate(test = substr(str_split_fixed(files[i], '_', 5)[5], 1, 2),
-             lot = str_split_fixed(files[i], '_', 5)[3])
-    
-    colnames(dat_list[[i]])[tPD_location] <- 'tPD'
-    dat_list[[i]]$tPD <- as.numeric(dat_list[[i]]$tPD)
-    
-    file.remove(files[i])
-    
-    }    
-  }else{
-    
-    for(i in 1:length(files)){
-
-      tPD_location <- ifelse(substr(files[i], 1, 10) %in% mypart, 9, 11)
-
-      dat_list[[i]] <- fread(files[i], sep = '', header = T) %>% 
-        na.omit() %>% 
-        `colnames<-`('V1') %>% 
-        wrangling()
-      
-      colnames(dat_list[[i]])[tPD_location] <- 'tPD'
-      
-      dat_list[[i]] <- dat_list[[i]] %>% 
-        select('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD') %>% 
-        mutate(test = substr(str_split_fixed(files[i], '_', 5)[5], 1, 2),
-               lot = str_split_fixed(files[i], '_', 5)[3])
-
-       colnames(dat_list[[i]])[tPD_location] <- 'tPD'
-       dat_list[[i]]$tPD <- as.numeric(dat_list[[i]]$tPD)
-
-      file.remove(files[i])
-    
     }
+    
+    rawdata <- rawdata[str_detect(rawdata$dat, 'DO='), ]
+    
+    rm(cycle)
+    
+    # Wrangling
+    
+    dat <- dat[str_detect(dat, 'DO=')] %>% 
+      str_replace_all('\\s+', ' ') %>% 
+      str_replace_all('= ', '=') %>% 
+      str_replace_all(' =', '=') %>% 
+      str_replace_all(': ', ':') %>% 
+      str_replace_all(' :', ':') %>% 
+      str_remove_all('DO=|FU=|HB=|CB=|NB=|DU=|SG=|HTEMP=|MV=|DCT|FBIN=|PBIN=|TAG=|ACT|NRT|FPE|ZQ|IDT|TRV|IBIS|FPN|SPIN|OPIN') %>% 
+      str_replace_all('\\s+', ' ') %>% 
+      str_trim() 
+    
+    # Split by Space
+    
+    n_col <- str_count(dat[1], ' ') + 1
+    
+    dat <- dat %>% 
+      str_split_fixed(' ', n_col) %>% 
+      as.data.frame() %>% 
+      mutate(cycle = rawdata$cycle)
+    
+    # Set Colnames
+    
+    if(part2 %in% c('K4F8E3D4HF7UP', 'K4F4E3S4HF7UQ', 'K4F4E3S4HF7WL')){
+      
+      names(dat)[1:10] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_F', 'tPD')
+      
+    }else if(part2 %in% c('K4F4E3S4HF7GN', 'K4F4E6S4HF7TT', 'K4F8E3D4HF7PN')){
+      
+      names(dat)[1:9] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD')
+      
+    }else if(part2 %in% c('K4UBE3S4AM95M', 'K4UCE3D4AM99U')){
+      
+      names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'first_MV', 'tPD', 'tPD_F')
+      
+    }else if(part2 %in% c('K3LK2K20BM76X', 'K3LK4K40BM93M', 'K3LK4K40BM76P')){
+      
+      names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'first_MV', 'second_MV', 'tPD')
+      
+    }else if(part2 %in% c('K3KL3L30CM9AH')){
+      
+      names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'first_MV', 'second_MV', 'tPD')
+      
+    }
+    
+    SG <- dat %>% sig_converting()
+    
+    dat <- cbind(dat, SG)
+    
+    dat$part <- part
+    dat$step <- step
+    dat$test_model <- test_model
+    dat$tester <- tester
+    
+    return(dat)
+    
+    
   }
   
- 
-  dat <- rbindlist(dat_list, fill = T) %>% filter(DO != '<EOF>' & DO != "\"\"")
-  sig <- sig_converting(dat) %>% select(-SG)
+  dat_list <- c()
   
-  dat <- dat %>% cbind(sig)
+  for(i in 1:length(files)){
+    
+    dat_list[[i]] <- w(files[i])
+    dat_list[[i]]$test <- i
+    file.remove(files[i])
+    
+  }
+  
+  for(i in 2:length(files)){
+    
+    dat_list[[i]]$cycle <- dat_list[[i]]$cycle + max(dat_list[[i-1]]$cycle)
+    
+  }
+  
+  dat <- rbindlist(dat_list)
   
   return(dat)
   
-}
-
-wrangling <- function(dat){
-  
-  dat$V1 <- str_trim(dat$V1)
-  dat$V1 <- str_remove_all(dat$V1, 'DO=|FU=|HB=|CB=|NB=|DU=|SG=|HTEMP=|MV=|DCT|SB= [0-9]+|SB=[0-9]+|SB=  [0-9]+|ns|FBIN=|PBIN=|TAG=|PS|ACT')
-  dat$V1 <- str_replace_all(dat$V1, '\\s+:', ':')
-  dat$V1 <- str_replace_all(dat$V1, ':\\s+', ':')
-  dat$V1 <- str_replace_all(dat$V1, '\\s+', ' ')
-
-  
-  ns <- str_count(dat$V1[1], ' ')
-  
-  dat <- str_split_fixed(dat$V1, ' ', ns+1) %>% 
-    as.data.frame() %>% 
-    `colnames<-`(c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 
-                   paste0('MSR', 1:(ns-7))))
-
-  return(dat)
   
 }
+
+
+# Signature Decoding ------------------------------------------------------
 
 sig_converting <- function(dat){
   
@@ -158,31 +156,9 @@ sig_converting <- function(dat){
            mask = PKGMAP$mask_code[match(mask, PKGMAP$mask_value)],
            run = paste0(line, prod, month, lot4, lot5, lot6)) %>% 
     
-    select(SG, run, wf, x, y, mask, line)
+    select(run, wf, x, y, mask, line)
   
   return(result)
-  
-}
-
-dat_fin <- function(dat){
-  
-  max_test <- max(dat$test)
-
-  dat <- dat %>% 
-    filter(test < max_test & HB %in% c(1:4)|test == max_test) %>% 
-    filter(HB != 7 & HB != 8 & HB != 0) %>% 
-    mutate(tPD = as.numeric(tPD),
-           NB_L = ifelse(NB == 0, 0, 1),
-           tPD_R = round(tPD, 0),
-           x = as.numeric(x),
-           y = as.numeric(y)) %>%
-    filter(tPD > 30)
-  
-  HTEMP <- as.numeric(str_split_fixed(dat$HTEMP, ':', 3)[, 1])
-  
-  dat$HTEMP <- HTEMP
-  
-  return(dat)
   
 }
 
@@ -193,7 +169,10 @@ dat_fin <- function(dat){
 tPD_plot <- function(dat){
   
   tPD <- dat %>%
-    group_by(tPD_R) %>%
+    mutate(tPD = round(tPD, 0),
+           NB_L = ifelse(NB == 0, 0, 1)) %>% 
+    filter(tPD > 40) %>% 
+    group_by(tPD) %>%
     summarise(YLD = 1 - mean(NB_L),
               n = n(),
               .groups = 'drop')
@@ -201,7 +180,7 @@ tPD_plot <- function(dat){
   param <- max(tPD$n) / max(tPD$YLD)
   
   plot_tPD <- tPD %>% 
-    ggplot(aes(x = tPD_R)) +
+    ggplot(aes(x = tPD)) +
     geom_bar(aes(y = n),
              stat = 'identity') +
     geom_line(aes(y = YLD * param, group = 1),
@@ -210,7 +189,7 @@ tPD_plot <- function(dat){
     scale_y_continuous(sec.axis = sec_axis(~. / param)) +
     theme_bw()
   
-  ggsave('tPDYLD.png')
+  ggsave('tPDYLD.png', scale = 3)
   
 }
 
@@ -220,12 +199,14 @@ NB_plot <- function(dat){
   
   plot_NB <- dat %>%
     filter(test == max(test)) %>% 
-    mutate(NB = factor(NB)) %>% 
+    mutate(NB = factor(NB),
+           tPD = round(tPD, 0),
+           NB_L = ifelse(NB == 0, 0, 1)) %>% 
     filter(NB_L != 0) %>% 
     group_by(NB) %>% 
     tally() %>% 
     arrange(desc(n)) %>%
-    head(10) %>% 
+    head(20) %>% 
     ggplot(aes(x = reorder(NB, -n),
                y = n)) + 
     geom_col() +
@@ -233,7 +214,7 @@ NB_plot <- function(dat){
     coord_flip() +
     theme_bw()
   
-  ggsave('NB.png')
+  ggsave('NB.png', scale = 3)
   
 }
 
@@ -242,6 +223,8 @@ NB_plot <- function(dat){
 byRUN_plot <- function(dat){
   
   byRUN <- dat %>% 
+    mutate(tPD = round(tPD, 0),
+           NB_L = ifelse(NB == 0, 0, 1)) %>% 
     group_by(run) %>% 
     summarise(n = n(),
               YLD = (1-mean(NB_L))*100,
@@ -269,7 +252,7 @@ byRUN_plot <- function(dat){
                                      hjust = 1),
           axis.title.x = element_blank())
   
-  ggsave('RUNYLD.png')
+  ggsave('RUNYLD.png', scale = 3)
   
 }
 
@@ -283,7 +266,7 @@ tPDRUN_plot <- function(dat){
     filter(tPD >= 40 & run %in% run_16$run) %>% 
     group_by(x, y, run) %>% 
     summarise(tPD = mean(tPD),
-	      n = n(),
+              n = n(),
               .groups = 'drop') %>%
     arrange(desc(n))
   
@@ -320,7 +303,7 @@ tPDRUN_plot <- function(dat){
     scale_fill_gradient(low = 'green',
                         high = 'red')
   
-  ggsave('tPDRUN.png')
+  ggsave('tPDRUN.png', scale = 3)
   
 }
 
@@ -331,10 +314,12 @@ MAPRUN_plot <- function(dat){
   run_16 <- dat %>% group_by(run) %>% tally %>% arrange(desc(n)) %>% head(16)
   
   WFmap <- dat %>% 
+    mutate(tPD = round(tPD, 0),
+           NB_L = ifelse(NB == 0, 0, 1)) %>% 
     filter(run %in% run_16$run) %>% 
     group_by(x, y, run) %>% 
     summarise(NB = sum(NB_L),
-	      n = n(),
+              n = n(),
               .groups = 'drop') %>% 
     mutate(NB = ifelse(NB == 0, 0, 1)) %>%
     arrange(desc(n))
@@ -372,7 +357,7 @@ MAPRUN_plot <- function(dat){
     ggtitle('Wafer Map') +
     scale_fill_gradientn(colors = c('skyblue', 'red'))
   
-  ggsave('NBRUN.png')
+  ggsave('NBRUN.png', scale = 3)
   
 }
 
@@ -380,27 +365,13 @@ MAPRUN_plot <- function(dat){
 
 DUTMAP <- function(dat){
   
-  dat <- fread('fin.csv') %>% 
-    mutate(cycle = 1,
-            HB_L = ifelse(HB %in% c(1:4), 'Good',
-                          ifelse(HB %in% c(7:8), 'Env', 'Fail')))
-
+  dat <- dat %>% 
+    mutate(HB_L = ifelse(HB %in% c(1:4), 'Good',
+                         ifelse(HB %in% c(7:8), 'Env', 'Fail')))
+  
   HTEMP <- as.numeric(str_split_fixed(dat$HTEMP, ':', 3)[, 1])
   
   dat$HTEMP <- HTEMP
-  
-  dat <- split(dat, dat$lot)
-  
-  for(i in 1:length(dat)){
-    for(j in 2:nrow(dat[[i]])){
-      
-      dat[[i]]$cycle[j] <- ifelse(dat[[i]]$DU[j] < dat[[i]]$DU[j-1], dat[[i]]$cycle[j-1] + 1, dat[[i]]$cycle[j-1])
- 
-    }
-  }
-  
-  dat <- rbindlist(dat)
-  
   dat$DU <- factor(dat$DU)
   dat$cycle <- factor(dat$cycle)
   
@@ -418,10 +389,9 @@ DUTMAP <- function(dat){
     scale_x_discrete(position = "top") +
     scale_y_discrete(limits = rev(levels(dat$cycle))) + 
     scale_fill_manual(values = c('Env' = 'red', 'Fail' = 'orange', 'Good' = 'blue')) +
-    facet_grid(~lot) + 
     theme_bw()
   
-  ggsave('DUTMAP.jpeg')
+  ggsave('DUTMAP.jpeg', scale = 3)
   
   ggplot(dat, 
          aes(x = DU, 
@@ -436,9 +406,8 @@ DUTMAP <- function(dat){
     scale_x_discrete(position = "top") +
     scale_y_discrete(limits = rev(levels(dat$cycle))) + 
     scale_fill_gradient(high = 'red', low = 'yellow') + 
-    facet_grid(~lot) + 
     theme_bw()
   
-  ggsave('TEMPMAP.jpeg')
+  ggsave('TEMPMAP.jpeg', scale = 3)
   
 }
