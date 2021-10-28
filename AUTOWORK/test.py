@@ -7,13 +7,11 @@ Created on Tue Jun 15 17:11:43 2021
 
 import ftplib
 import gzip
-import re
 import os
 import pandas as pd
 from tqdm import tqdm
 
 lscl = input('이상처리?(y/n) :   ')
-MSR = input('MSR?(y/n) : ')
 
 lot_list = input('Lot List(sep = ' ') :   ')
 lot_list = lot_list.split(' ')
@@ -37,21 +35,13 @@ def save_data(file_list):
         
         # Convert to ASCII Code
         
-        data = data.decode('ascii')
-        
-        header = re.sub("\nLOADERSIDE[^\n]+\n","\n", data).split("[SUBBIN INFORMATION START")[0]   
-        data = re.sub("\nLOADERSIDE[^\n]+\n","\n", data).split("[SAMSUNG PACKAGE MAP CODE START]")[-1]    
-        
+        data = data.decode('ascii') 
         data = data.split('\n')
-        del data[-1]
-        header = header.split('\n')
         
         # to CSV File
         
         data = pd.DataFrame(data)
-        header = pd.DataFrame(header)
         data.to_csv(file_name + '.csv', index = False, header = False, sep = ',')
-        header.to_csv(lot + '_HEADER.csv', index = False, header = False, sep = ',')
 
 
 pmapftp = ftplib.FTP("12.98.17.50")
@@ -74,7 +64,7 @@ for lot in tqdm(lot_list):
         
         for data in file_list:
         
-            	if lot in data and 'T09' in data:
+            	if lot in data:
 
                     mylot_data.append(data)
                     
@@ -90,7 +80,7 @@ for lot in tqdm(lot_list):
         if lscl == 'n':
             
             save_data(mylot_data)
-        
+
         else:
             
             os.chdir('C:/Users/mano.hong/Desktop/AUTOWORK/' + folder)
@@ -103,6 +93,6 @@ for lot in tqdm(lot_list):
                         
 
 os.chdir('C:/Users/mano.hong/Desktop/AUTOWORK')
-order = 'rscript autowork.R ' + lscl + ' ' + folder  + ' ' + MSR
+order = 'rscript autowork.R ' + lscl + ' ' + folder
 
 os.system(order)
