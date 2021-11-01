@@ -71,7 +71,8 @@ wrangling <- function(files){
 
       names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD')
 
-    }else if(part2 %in% c('K3KL3L30CM9AH')){
+    }else if(part2 %in% c('K3KL3L30CM9AH')|
+                          substr(part2, 1, 10) %in% c('K3LK7K70BM', 'K3LK6K60BM')){
 
       names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD')
 
@@ -171,7 +172,7 @@ tPD_plot <- function(dat){
   tPD <- dat %>%
     mutate(tPD = round(tPD, 0),
            NB_L = ifelse(NB == 0, 0, 1)) %>% 
-    filter(tPD > 40) %>% 
+    filter(tPD > 40 & tPD < 100) %>% 
     group_by(tPD) %>%
     summarise(YLD = 1 - mean(NB_L),
               n = n(),
