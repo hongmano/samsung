@@ -40,7 +40,7 @@ wrangling <- function(files){
       str_replace_all(' =', '=') %>% 
       str_replace_all(': ', ':') %>% 
       str_replace_all(' :', ':') %>% 
-      str_remove_all('DO=|FU=|HB=|CB=|NB=|DU=|SG=|HTEMP=|MV=|DCT|FBIN=|PBIN=|TAG=|ACT|NRT|FPE|ZQ|IDT|TRV|IBIS|FPN|SPIN|OPIN') %>% 
+      str_remove_all('DO=|FU=|HB=|CB=|NB=|DU=|SG=|HTEMP=|MV=|DCT|FBIN=|PBIN=|TAG=|ACT|FPE|ZQ|IDT|TRV|IBIS|FPN|SPIN|OPIN') %>% 
       str_replace_all('\\s+', ' ') %>% 
       str_trim() 
     
@@ -73,7 +73,7 @@ wrangling <- function(files){
       
     }else if(part2 %in% c('K3KL3L30CM9AH')){
       
-      names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'first_MV', 'second_MV', 'tPD')
+      names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD')
       
     }
     
@@ -107,7 +107,7 @@ wrangling <- function(files){
     
   }
   
-  dat <- rbindlist(dat_list)
+  dat <- rbindlist(dat_list, fill = T)
   
   return(dat)
   
