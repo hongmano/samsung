@@ -52,7 +52,7 @@ wrangling <- function(files){
       str_split_fixed(' ', n_col) %>% 
       as.data.frame() %>% 
       mutate(cycle = rawdata$cycle)
-    
+
     # Set Colnames(HF)
 
     if(part2 %in% c('K4F8E3D4HF7UP', 'K4F4E3S4HF7UQ', 'K4F4E3S4HF7WL')){
@@ -69,25 +69,13 @@ wrangling <- function(files){
 
     }else if(part2 %in% c('K3LK2K20BM76X', 'K3LK4K40BM93M', 'K3LK4K40BM76P')){
 
-      names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'first_MV', 'second_MV', 'tPD')
+      names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD')
 
     }else if(part2 %in% c('K3KL3L30CM9AH')){
 
       names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD')
 
     }
-    
-    # # Set Colnames(LF)
-    # 
-    # if(part2 %in% c('K4F4E3S4HF7WL', 'K4F4E3S4HF7UQ', 'K4F8E3D4HF7UP')){
-    #   
-    #   names(dat)[1:8] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP')
-    # 
-    #   }else{
-    #   
-    #     names(dat)[1:9] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'SB', 'DU', 'SG', 'HTEMP')
-    #     
-    # }
     
     SG <- dat %>% sig_converting()
     
