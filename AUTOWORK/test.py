@@ -64,7 +64,7 @@ for lot in tqdm(lot_list):
         
         for data in file_list:
         
-            	if lot in data:
+            	if lot+'_' in data:
 
                     mylot_data.append(data)
                     
