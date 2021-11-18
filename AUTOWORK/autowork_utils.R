@@ -97,7 +97,7 @@ wrangling <- function(files){
   for(i in 1:length(files)){
     
     dat_list[[i]] <- w(files[i])
-    dat_list[[i]]$test <- i
+    dat_list[[i]]$test <- as.numeric(substr(str_sub(files[i], start = -13), 1, 2))
     file.remove(files[i])
     
   }
@@ -172,7 +172,7 @@ tPD_plot <- function(dat){
   tPD <- dat %>%
     mutate(tPD = round(tPD, 0),
            NB_L = ifelse(NB == 0, 0, 1)) %>% 
-    filter(tPD > 40 & tPD < 100) %>% 
+    filter(tPD > 40 & tPD < 70) %>% 
     group_by(tPD) %>%
     summarise(YLD = 1 - mean(NB_L),
               n = n(),
@@ -315,6 +315,7 @@ MAPRUN_plot <- function(dat){
   run_16 <- dat %>% group_by(run) %>% tally %>% arrange(desc(n)) %>% head(16)
   
   WFmap <- dat %>% 
+    filter(x > 0 & y > 0) %>%
     mutate(tPD = round(tPD, 0),
            NB_L = ifelse(NB == 0, 0, 1)) %>% 
     filter(run %in% run_16$run) %>% 
@@ -406,8 +407,10 @@ DUTMAP <- function(dat){
     labs(y = "cycle") +
     scale_x_discrete(position = "top") +
     scale_y_discrete(limits = rev(levels(dat$cycle))) + 
-    scale_fill_gradient(high = 'red', low = 'yellow') + 
-    theme_bw()
+    scale_fill_gradient(high = 'red', low = 'blue') + 
+    theme_bw() +
+    theme(axis.text.x = element_blank())
+
   
   ggsave('TEMPMAP.jpeg', scale = 3)
   
