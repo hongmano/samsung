@@ -1,0 +1,515 @@
+FUNA:
+        STRING FACAL2(7)=""  & STRING FAPAT2(13)="" & STRING FASCR(8)=""   &                      & STRING FAIDX1(5)=""
+        STRING FALEV2(10)="" & STRING FAFMT2(10)="" & STRING FATLE2(25)="" & STRING FATLE1(25)="" & STRING FAPAT3(9)=""
+        STRING FASCM1(8)=""  & STRING FBFMT2(10)="" & STRING FBFMT5(10)="" & STRING CALN(7)=""
+
+        ARGUMENT(FATN1,FAFBIN,COLDREVIDX,HOTREVIDX,FASBIN,FAVDD2,FRATE,FALEV1,FAFMT1,FAMOD1,FAPAT1,FATPH1,FTSAC,FAREF1,FATLE)
+XXT=1
+        IF DROOP_VD2_MEAS<>"Y" THEN XXT1=2
+        IF DROOP_VD2_MEAS<>"Y" THEN XXT2=10
+
+        IF DROOP_VD2_MEAS<>"Y" THEN XXT1=1000
+        IF DROOP_VD2_MEAS<>"Y" THEN XXT2=1
+
+        IF DROOP_VD2_MEAS="Y" THEN ENTRY
+         XXT1=1000
+        WRITE /,FAPAT1," : "
+;  DO AAY6 XXT=1 1200 1
+EXIT
+FUNA_T:
+        TN=FATN1 & FALEV2=FALEV1 & FBFMT2=FAFMT1 & FAPAT2(1,13)=FAPAT1 & FAPAT3(1,9)=FAPAT2(5,9)
+                                                 ;PU414NADC5K4ANN 
+        TEST TN
+
+        FAMOD2=FAMOD1 & FATLE1=FATLE & FALEV3=NUMERIC(FALEV2(4,2)) & FBFMT4=FBFMT2 & FATLE1=FATLE
+        FBFMT3=NUMERIC(FBFMT2(4,2)) & FACFMT=FBFMT2 & FAFMT2(1,1)=FACFMT(6,1) & FBFMT5(1,5)=FBFMT2(1,5) & FBFMT5(6,1)=" "
+
+        TSTORD=1
+        TSTCNT=TSTFLG
+        INXCHK=0
+        DINV=0
+        TSAC=FTSAC
+
+        IF PRCFLG=0 AND COLDREVIDX<REVFLG             THEN GOTO FSKP          ; COLD OLD REVISION ITEM SKIP
+        IF PRCFLG=1 AND  HOTREVIDX<REVFLG             THEN GOTO FSKP          ; HOT  OLD REVISION ITEM SKIP
+    
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;       PATTERN SETTING
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+        RESET MPAT
+        FAPATN(1,13)=FAPAT1
+        IF ORGNUM=8 THEN FAPATN(3,1)="3"
+;       FAPATN(14,1)=FAMOD2(2,1)                             ; NOR(NN),HSDO(DO),XOR_FIXH(XH),XOR_FIXL(XL),XOR_RDBI_HL(XT),XOR_RDBI_LH(XC)
+;       IF FAMOD2(3,2)="XO" THEN FAPATN(13,1)="O"           ; XOR_OTF(XO)
+;       IF FAMOD2(3,2)="XD" THEN FAPATN(13,1)="O"           ; XOR_OTF_RDBI(XD)
+;       IF FAMOD2(3,2)="XT" THEN FAPATN(13,1)="O"           ; XOR_OTF(XT)
+        IF FAMOD2(1,1)="D"  THEN DINV=1
+        FAPATN(14,1)="N"
+        FAPATN(15,1)="N"     
+        IF FAMOD2(4,1)="F"  THEN FAPATN(15,1)="F"
+
+        HSDOCNT=1
+        IF SHMTESTING=1 OR DOUMI_SHM="Y" THEN ENTRY      ;ONLY SHM
+           IF FAMOD2(4,1)="E" OR FAMOD2(4,1)="O" THEN ENTRY
+              IF FAMOD2(4,1)="E" THEN HSDOCNT=1   ; HSDO EVEN
+              IF FAMOD2(4,1)="O" THEN HSDOCNT=2   ; HSDO ODD
+              FAMOD2(4,1)="D"
+           EXIT
+        EXIT
+        IF HSDOSEL="E" THEN HSDOCNT=1
+        IF HSDOSEL="O" THEN HSDOCNT=2
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;       VCC Setting
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+        FAVCC2=FAVDD2
+
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;       PATTERN INDEX REGISETER SETTING
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+       GOSUB WHINDX
+
+;      IF FBFMT2(3,1)="D" THEN ENTRY
+             IF FAMOD2(5,1)="X" THEN XSP      = XSP/#100    ; FXCELL / 256   ;        
+             IF FAMOD2(5,1)="2" THEN XSP      = XSP/#200    ; FXCELL / 512   ;        
+             IF FAMOD2(5,1)="N" THEN XSP      = XSP/#100    ; PARTAIL NOSCR FXCELL / 256   ;        
+             IF FAMOD2(5,1)="B" THEN XSP      = XSP/#200    ; PARTAIL NOSCR FXCELL / 512   ;        
+             IF FAMOD2(5,1)="Y" THEN Y16MAX   = #4 
+             IF FAMOD2(5,1)="Y" THEN YSP      = #3F
+;      EXIT
+       
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;       SCRAMBLE ENABLE                                
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+       IF ORGNUM=16 THEN ENTRY
+          FASCR="CDCS8FUL"
+          IF FAMOD2(5,1)="X" THEN FASCR = "CDCS8PA1"     ; FXCELL / 128
+;         IF FAMOD2(5,1)="X" THEN FASCR = "CDCS8PA2"     ; FXCELL / 128
+          IF FAMOD2(5,1)="2" THEN FASCR = "CDCS8PA2"     ; FXCELL / 512
+          IF FAMOD2(5,1)="N" THEN FASCR = "CDCS8FUL"     ; FXCELL / 128
+          IF FAMOD2(5,1)="Y" THEN FASCR = "CDCS8FUL" 
+          IF FAMOD2(5,1)="B" THEN FASCR = "CDCS8PB3"     ; 2/BLOCK
+       EXIT
+       
+       IF ORGNUM=8 THEN ENTRY
+          FASCR="CC3S8FUL"
+          IF FAMOD2(5,1)="X" THEN FASCR = "CD3S8PA1"     ; FXCELL / 128
+          IF FAMOD2(5,1)="2" THEN FASCR = "CD3S8PA2"     ; FXCELL / 256
+          IF FAMOD2(5,1)="N" THEN FASCR = "CD3S8FUL"     ; FXCELL / 128
+          IF FAMOD2(5,1)="Y" THEN FASCR = "CD3S8FUL" 
+       EXIT
+       
+;      IF CURSCR<>FASCR THEN ENTRY       
+           SELECT SCRDATA ENABLE
+           SEND SCRDATA <FASCR>    
+           EXEC CCALL("SetScramblebit",FASCR) 
+           CURSCR=FASCR
+;      EXIT
+
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;       DBI SETTING                                    
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+        MR3_WDBI=0   &  MR3_RDBI=0
+        IF FAMOD2(2,1)="W" THEN MR3_WDBI=#1
+        IF FAMOD2(2,1)="R" THEN MR3_RDBI=#1
+        IF FAMOD2(2,1)="D" THEN ENTRY & MR3_WDBI=#1 & MR3_RDBI=#1 & EXIT
+       
+;       WCK FREERUN       
+        MR18_WCKALWAYSON=#0
+        IF FAPAT3(2,1)="F" OR FAPAT3(2,1)="R" THEN MR18_WCKALWAYSON=#1
+        IF FAPAT3(2,1)="F" OR FAPAT3(2,1)="R" THEN L_DELAY="Y"   
+        IF FAPAT3(2,1)="F" AND TSPEED>7499 THEN L_DELAY="N"   
+        MR22_RECC=#0 & MR22_WECC=#0 
+        IF FAMOD2(1,1)="L" THEN ENTRY & MR22_RECC=#1 & MR22_WECC=#1 & EXIT
+
+;       IF TSPEED=7500 THEN ENTRY
+;          IF MR3_RDBI=#1 THEN ENTRY & MR1_WL=#7 & MR2_RL=#B & MR2_NWR=#B & EXIT
+;          IF MR3_RDBI=#0 THEN ENTRY & MR1_WL=#7 & MR2_RL=#A & MR2_NWR=#B & EXIT     
+;          IF FAMOD2(1,1)="L" THEN ENTRY & MR1_WL=#7 & MR2_RL=#B & MR2_NWR=#B & EXIT
+;       EXIT
+
+        GOSUB WLRLCAL(WCKCKRATIO,MR1_WL,MR2_RL,DVFSC,WLSET,L_DELAY)
+
+       IF TMRS_GRP_NAME(1,6)="RLCHG4" THEN ENTRY
+          CWL=0 & CRL=16
+       EXIT  
+
+        WL=CWL & RL=CRL
+
+;      IF FAPATN(11,1)="D" OR FAPATN(11,1)="L"  THEN RL=CRL+RDBI_DIFF     ; RDBI ON OR LINK_ECC ON
+;      ALLIO=OPEN
+
+       GOSUB (FBFMT3) FMD01CA,FMD02CA,FMD03CA,FMD04CA
+     
+ C2TSTF:    
+
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;       Speed Item STRB OFFSET Setting
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+       IF FBFMT2(3,1)<>"R" THEN ENTRY
+          TCK=FRATE
+;         GOSUB DDRTIM
+          IF SHMTESTING=1 OR DOUMI_SHM="Y" THEN ENTRY ; setting in training 
+             IF WCKCKRATIO=4 THEN GOSUB TFCHG1(TCK,4.5NS)
+             IF WCKCKRATIO=2 THEN GOSUB TFCHG2(TCK,  9NS)
+          EXIT
+          STRB1   =<1>TSACE+TSAC
+          STRB3   =<1>TSACE+TSAC 
+          STRB129 =<1>TSACO+TSAC
+          STRB131 =<1>TSACO+TSAC         
+          
+          IF FAMOD2(4,1)="D" OR FAMOD2(4,1)="X" OR FAMOD2(4,1)="F" THEN ENTRY
+;            STRB129 =<1>TSACE+TSAC
+;            STRB131 =<1>TSACE+TSAC      
+
+             IF HSDOCNT=1  THEN ENTRY & STRB1   =<1>TSACE+TSAC  & STRB3   =<1>TSACE+TSAC  & STRB129 =<1>TSACO+TSAC  & STRB131 =<1>TSACO+TSAC & EXIT
+             IF HSDOCNT=2  THEN ENTRY & STRB129 =<1>TSACE+TSAC  & STRB131 =<1>TSACE+TSAC  & STRB1   =<1>TSACO+TSAC  & STRB3   =<1>TSACO+TSAC & EXIT
+            IF CRL=79 THEN ENTRY
+             IF HSDOCNT=1  THEN ENTRY & STRB1   =<1>TSACE+TSAC+TRATE  & STRB3   =<1>TSACE+TSAC+TRATE  & STRB129 =<1>TSACO+TSAC+TRATE  & STRB131 =<1>TSACO+TSAC+TRATE & EXIT
+             IF HSDOCNT=2  THEN ENTRY & STRB129 =<1>TSACE+TSAC+TRATE  & STRB131 =<1>TSACE+TSAC+TRATE  & STRB1   =<1>TSACO+TSAC+TRATE  & STRB3   =<1>TSACO+TSAC+TRATE & EXIT
+            EXIT
+ 
+          EXIT   
+       ;  IF FAMOD2(4,1)="N" AND TSPEED>3500 THEN ENTRY 
+       ;  
+       ;     STRB1   =<1>TSACE+TSAC-TRATE/4
+       ;     STRB3   =<1>TSACE+TSAC-TRATE/4 
+       ;     STRB129 =<1>TSACO+TSAC-TRATE/4
+       ;     STRB131 =<1>TSACO+TSAC-TRATE/4         
+       ;  
+       ;  
+       ;  EXIT
+       EXIT
+             
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;       PIN FORMAT                      
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;      SRON
+
+           IF ORGNUM<>8 THEN GOSUB IOFX16
+           IF ORGNUM=8  THEN GOSUB IOFX8
+
+;      NORMAL/FUNCTION ITEM CS/CKE Control
+;---------------------------------------------------------------------------------------------------------------------------------------------------------
+;       CFLG SETTING BY TEST MRS 
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+        CCFLG=#01
+        IF FBFMT2(2,1)="S" OR FBFMT2(2,1)="P"  THEN CCFLG=#00
+        IF                    FBFMT2(2,1)="P"  THEN CCFLG=#00
+        IF DOUMITEST<>0    OR DOUMI_SHM="Y"    THEN CCFLG=#00
+        IF FBFMT2(3,1)="D" THEN ENTRY                                          ; DVFSC  DVFSQ   HSDI  HSDI  HSDO  HSDO  HSDO
+                                                  HSDOFLG = #00                ;   8      7      6     5     4     3     2 
+           IF FAMOD2(3,1)="N"               THEN    CCFLG = CCFLG.OR.#00       ;                                              ;NOR  
+           IF FAMOD2(4,1)="D" AND HSDOCNT=1 THEN  HSDOFLG = HSDOFLG.OR.#04     ;                                  EVEN        ;HSDO_EVEN
+           IF FAMOD2(4,1)="D" AND HSDOCNT=2 THEN  HSDOFLG = HSDOFLG.OR.#08     ;                            ODD               ;HSDO_ODD
+           IF FAMOD2(4,1)="X"               THEN  HSDOFLG = HSDOFLG.OR.#0C     ;                            XOR   XOR         ;XOR_FIXH/FIXL/OTF/RDBI
+           IF FAMOD2(4,1)="F"               THEN  HSDOFLG = HSDOFLG.OR.#02     ;                                        OTF   ;HSDO_OTF 
+
+           IF FAMOD2(3,1)="O"               THEN    CCFLG = CCFLG.OR.#20       ;               DIOTF                          ;HSDI
+           IF FAMOD2(3,1)="T"               THEN    CCFLG = CCFLG.OR.#10       ;                     DMIOTF                   ;HSDI
+
+;          IF DVFSC="E" AND TSPEED <=1600   THEN    CCFLG = CCFLG.OR.#80       ;  EN                    
+;          IF DVFSQ="E" AND TSPEED <=3200   THEN    CCFLG = CCFLG.OR.#40       ;         EN             
+                                                                              
+           IF FBFMT2(2,1)="M"               THEN    CCFLG = CCFLG.OR.#000      ;   9 EXTRA TMRS OFF
+           IF FBFMT2(2,1)="S"               THEN    CCFLG = CCFLG.OR.#100      ;   9 EXTRA TMRS ON
+           IF FBFMT2(2,1)="T"               THEN    CCFLG = CCFLG.OR.#100      ;   9 EXTRA TMRS ON
+
+        EXIT
+
+ ;---------- wck free enter ----------;
+           IF L_DELAY="Y" THEN ENTRY                     ;MR2 7  6  5  4  DBI
+                                                         ;    16 15 14 13 12
+              IF MR1_WL=#0   THEN CCFLG = CCFLG.OR.#0000 ;               
+              IF MR1_WL=#1   THEN CCFLG = CCFLG.OR.#1000 ;             Y 
+              IF MR1_WL=#2   THEN CCFLG = CCFLG.OR.#2000 ;          Y    
+              IF MR1_WL=#3   THEN CCFLG = CCFLG.OR.#3000 ;          Y  Y 
+              IF MR1_WL=#4   THEN CCFLG = CCFLG.OR.#4000 ;       Y       
+              IF MR1_WL=#5   THEN CCFLG = CCFLG.OR.#5000 ;       Y     Y 
+              IF MR1_WL=#6   THEN CCFLG = CCFLG.OR.#6000 ;       Y  Y    
+              IF MR1_WL=#7   THEN CCFLG = CCFLG.OR.#7000 ;       Y  Y  Y 
+              IF MR1_WL=#8   THEN CCFLG = CCFLG.OR.#8000 ;    Y          
+              IF MR1_WL=#9   THEN CCFLG = CCFLG.OR.#9000 ;    Y        Y 
+              IF MR1_WL=#A   THEN CCFLG = CCFLG.OR.#A000 ;    Y     Y    
+              IF MR1_WL=#B   THEN CCFLG = CCFLG.OR.#B000 ;    Y     Y  Y 
+              IF MR1_WL=#C   THEN CCFLG = CCFLG.OR.#C000 ;    Y     Y    
+              IF MR1_WL=#D   THEN CCFLG = CCFLG.OR.#D000 ;    Y     Y  Y 
+           EXIT
+           
+;          IF FAPAT3(2,1)="F" AND TSPEED=7500 THEN ENTRY
+;             IF MR1_WL=#7 THEN CCFLG = CCFLG.OR.#C000 ;    Y     Y    
+;          EXIT
+
+           IF FAPATN(7,3)="OSC" THEN ENTRY               ;MR2 7  6  5  4  DBI
+                                                         ;    16 15 14 13 12
+              IF MR1_WL=#0   THEN CCFLG = CCFLG.OR.#0000 ;               
+              IF MR1_WL=#1   THEN CCFLG = CCFLG.OR.#1000 ;             Y 
+              IF MR1_WL=#2   THEN CCFLG = CCFLG.OR.#2000 ;          Y    
+              IF MR1_WL=#3   THEN CCFLG = CCFLG.OR.#3000 ;          Y  Y 
+              IF MR1_WL=#4   THEN CCFLG = CCFLG.OR.#4000 ;       Y       
+              IF MR1_WL=#5   THEN CCFLG = CCFLG.OR.#5000 ;       Y     Y 
+              IF MR1_WL=#6   THEN CCFLG = CCFLG.OR.#6000 ;       Y  Y    
+              IF MR1_WL=#7   THEN CCFLG = CCFLG.OR.#7000 ;       Y  Y  Y 
+              IF MR1_WL=#8   THEN CCFLG = CCFLG.OR.#8000 ;    Y          
+              IF MR1_WL=#9   THEN CCFLG = CCFLG.OR.#9000 ;    Y        Y 
+              IF MR1_WL=#A   THEN CCFLG = CCFLG.OR.#A000 ;    Y     Y    
+              IF MR1_WL=#B   THEN CCFLG = CCFLG.OR.#B000 ;    Y     Y  Y 
+              IF MR1_WL=#C   THEN CCFLG = CCFLG.OR.#C000 ;    Y     Y    
+              IF MR1_WL=#D   THEN CCFLG = CCFLG.OR.#D000 ;    Y     Y  Y 
+              IF MR3_RDBI=#1 THEN CCFLG = CCFLG.OR.#0800 ;                 Y
+
+
+           EXIT
+         CCFLG = CCFLG.OR.HSDOFLG
+               
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;       PATTERN SENDING START    
+;---------------------------------------------------------------------------------------------------------------------------------------------------------
+        
+        SEND MPAT <FAPATN>
+        GOSUB PIDXST(FAPAT3)
+        IF INXCHK=0 THEN ENTRY & WRITE/"CHECK INDEX SUB (PATN=",FAPAT3,",INXCHK=",INXCHK,")" & GOTO ERRMSG & EXIT
+
+        IF FAMOD2(4,1)="N"                 THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=RD  & REG MPAT CPE3=C12 & REG MPAT CPE4=C12 & EXIT
+;       IF FAMOD2(4,1)="N"                 THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=RD  & REG MPAT CPE3=C30 & REG MPAT CPE4=C30 & EXIT
+
+        IF FAMOD2(4,1)="N" AND FAPATN(7,3)="RDC" THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=RD  & REG MPAT CPE3=C12 & REG MPAT CPE4=C12 & EXIT
+        IF FAMOD2(4,1)="N" AND FAPATN(7,3)="WTR" THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=RD  & REG MPAT CPE3=C12 & REG MPAT CPE4=C12 & EXIT
+
+;       IF FAMOD2(4,1)="N" AND TSPEED>3500 THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=RD  & REG MPAT CPE3=C30 & REG MPAT CPE4=C30 & EXIT
+        IF FAMOD2(4,1)="N" AND FAPATN(7,3)="OSC" THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=C30 & REG MPAT CPE3=C12 & REG MPAT CPE4=C12 & EXIT
+
+        IF FAMOD2(4,1)="D" AND HSDOCNT=1   THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=C30 & REG MPAT CPE3=C30 & REG MPAT CPE4=C30 & EXIT
+        IF FAMOD2(4,1)="D" AND HSDOCNT=2   THEN ENTRY & REG MPAT CPE1=C30 & REG MPAT CPE2=RD  & REG MPAT CPE3=C30 & REG MPAT CPE4=C30 & EXIT
+
+        IF FAMOD2(4,1)="X"                 THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=C30 & REG MPAT CPE3=C30 & REG MPAT CPE4=C30 & EXIT
+        IF FAMOD2(4,1)="F"                 THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=C30 & REG MPAT CPE3=C30 & REG MPAT CPE4=C30 & EXIT
+        IF TN=369                          THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=RD  & REG MPAT CPE3=C30 & REG MPAT CPE4=C30 & EXIT
+
+
+        IF FAPATN(7,7)="LEC5N5C" OR FAPATN(7,7)="LEC5N5D" OR FAPATN(7,7)="LEC4N2C" OR FAPATN(7,7)="LEC4N2D"  THEN ENTRY     
+           IF FAMOD2(4,1)="D" AND HSDOCNT=1   THEN ENTRY & REG MPAT CPE1=RD  & REG MPAT CPE2=C30 & REG MPAT CPE3=C13 & REG MPAT CPE4=C30 & EXIT
+           IF FAMOD2(4,1)="D" AND HSDOCNT=2   THEN ENTRY & REG MPAT CPE1=C30 & REG MPAT CPE2=RD  & REG MPAT CPE3=C30 & REG MPAT CPE4=C13 & EXIT
+        EXIT
+        
+        REG MPAT PC=#00
+        REG MPAT CFLG = CCFLG
+
+        REG MPAT TIMER=FAREF1
+
+        IF FATPH1<>#0000 THEN ENTRY
+           REG MPAT TPH1_1=FATPH1
+           REG MPAT TPH2_1=FATPH1
+        EXIT  
+        
+        GOSUB MR_SETTING ;  MR_VALUE TO YTx
+        IF SHMTESTING=1     THEN GOSUB SHMCONDTION
+        IF DOUMI_SHM="Y"    THEN GOSUB DSHM_CONDTION
+        IF FBFMT2(2,1)="S"  THEN GOSUB TEST_TMRS_SETTING
+        IF FBFMT2(2,1)="T"  THEN GOSUB TEST_TMRS_SETTING
+        IF TN=369 THEN REG MPAT YT8=#08
+   
+   
+        IF C8OFFSET<>0PS THEN ENTRY
+        TIMING SET = 1
+        
+        BCLK8  =  WCKR           WCKR2   WCKR   WCKR   WCKR   WCKR   WCKR   WCKR2        ;WCK
+        CCLK8  =  WCKF+C8OFFSET  WCKF2   WCKF   WCKF   WCKF   WCKF   WCKF   WCKF2        ;WCK
+        
+        
+        EXIT
+
+        IF FAPATN(7,4)="SEC1"  THEN ENTRY
+              TIMING SET=1
+           ;            1      2      3
+           BCLK9  =  TDSVA  TDSVA2  TDSVA+TRATE/4
+           CCLK9  =  TDHVA  TDHVA2  TDHVA+TRATE/4
+
+           BCLK10 =  TDSVA  TDSVA2  TDSVA+TRATE/4
+           CCLK10 =  TDHVA  TDHVA2  TDHVA+TRATE/4
+
+        EXIT
+        IF FAPATN(7,7)="M265N5A" OR FAPATN(7,7)="M265N5B"  THEN ENTRY
+              TIMING SET=1
+           ;            1      2      3     4                  5                6             7
+;          BCLK8  =  WCKR   WCKR2   WCKR   WCKR+TRATE*0.1    WCKR-TRATE*0.1    WCKR   WCKR   WCKR2        ;WCK
+           CCLK8  =  WCKF   WCKF2   WCKF   WCKF+TRATE*0.1    WCKF-TRATE*0.1    WCKF   WCKF   WCKF2        ;WCK
+
+        EXIT
+       IF FAPATN(7,7)="COB7N5W" OR FAPATN(7,7)="COB6N4W" THEN ENTRY 
+          REG MPAT D1B_1=MR30_DCA
+          REG MPAT D1E_1=MR24_DFE
+       EXIT
+
+
+;--------------------------------------------------------------------------------------------------------------------------
+;------NRT NG_BIN For PKGMAP-----------------------------------------------------------------------------------------------
+;--------------------------------------------------------------------------------------------------------------------------
+        IF NRTFLG=1 THEN ENTRY  ;;NRT
+           FATT=TN+5000          ;;NRT
+           TEST FATT
+        EXIT
+
+        SSBIN=FASBIN
+;--------------------------------------------------------------------------------------------------------------------------
+;       TEST
+;--------------------------------------------------------------------------------------------------------------------------
+       ;INSERT MAIN_SDEFINE           ; for manual shmoo
+
+        IF FK=#4000 AND SHMFLG=1 THEN GOTO CONT     ; HSUSHM
+
+
+        IF DROOP_VD2_MEAS="Y" THEN ENTRY
+ ; DO AAY6 XXT=1 50 1
+        
+           START MPAT *
+ ; XXT=1
+ ;         WAIT TIME 1MS
+           WAIT TIME XXT*10US   
+           MEAS VS2!1:IMDAT
+           WAIT TIME 20MS
+ 
+           WAIT TIME 200MS
+           STOP MPAT
+       ;   WRITE /,XXT*10," : ",IMDAT(2),ASCII(IMDAT(2)/1MA,2,8,1," ")
+           WRITE ASCII(IMDAT(2)/1MA,2,8,1," ")
+ ;         GOTO CONT
+                
+
+        EXIT
+
+
+        IF DROOP_VD2_MEAS<>"Y" THEN ENTRY
+        MEAS MPAT(3) & XXX: 
+        EXIT
+
+
+
+
+        READ CDUT TO CURDUT
+        READ FDUT TO CFDUT
+
+;       IF FBFMT2(3,1)<>"R" AND FK=#4000 THEN  GOTO HSHMS    ;HSUSHM
+
+;-------------------------------------------------------------------------------------------------------------------
+
+    IF ORGNUM=16 THEN ENTRY
+       READ FUNC1(DATA0) TO PFDATA0 ;;CS0_0 DO=1
+       READ FUNC1(DATA1) TO PFDATA1 ;;CS0_1 DO=2
+       READ FUNC1(DATA2) TO PFDATA2 ;;CS1_0 DO=3
+       READ FUNC1(DATA3) TO PFDATA3 ;;CS1_1 DO=4
+    EXIT
+    IF ORGNUM=8 THEN ENTRY
+       READ FUNC1(DATAX80) TO PFDATA0 ;;CS_A0 DO=1
+       READ FUNC1(DATAX81) TO PFDATA1 ;;CS_A1 DO=2
+       READ FUNC1(DATAX82) TO PFDATA2 ;;CS_B0 DO=3
+       READ FUNC1(DATAX83) TO PFDATA3 ;;CS_B1 DO=4
+       READ FUNC1(DATAX84) TO PFDATA4 ;;CS_C0 DO=5
+       READ FUNC1(DATAX85) TO PFDATA5 ;;CS_C1 DO=6
+       READ FUNC1(DATAX86) TO PFDATA6 ;;CS_D0 DO=7
+       READ FUNC1(DATAX87) TO PFDATA7 ;;CS_D1 DO=8
+    EXIT
+   
+       GOSUB DUTRESLT
+       IF DOUMI_SHM="Y" THEN GOTO LOOPCTRL
+
+  IF FK=#10 AND SHMTESTING=0 AND FAPATN(7,3)<>"OSC" AND FAPATN(7,3)<>"ZQC"THEN ENTRY
+       WRITE /,STEP," ",CSN," ","TN=",ASCII(TN,2,5,0," "),ASCII(LP5VD2/1V,2,6,3," "),"V",ASCII(LP5VD2L/1V,2,6,3," "),"V",ASCII(LP5VDQ/1V,2,6,3," "),"V",ASCII(LP5TCK/1PS,2,7,1," "),"PS" 
+       WRITE  ," ",FREQ," ",FAFMT1," ",FAMOD2," ",ASCII(HSDOCNT,2,1,0," ")," ",FAPATN," ",ASCII(AA/1S,1,6,1," "),ASCII(CC/1S,1,6,2," "),"   "
+       WRITE ,DSPREPA(1,TP),"_(",DSPREPA(1*TP+1,TP),")(",DSPREPA(2*TP+1,TP),")(",DSPREPA(3*TP+1,TP),")(",DSPREPA(4*TP+1,TP),")"
+       IF EXT_IOF="Y"  OR  FATPH1<>#0000 THEN WRITE " #",ASCII(FATPH1,5,4)
+       IF EXT_IOF<>"Y" AND FATPH1=#0000  THEN WRITE " -----"
+       IF FBFMT2(2,1)="S" OR FBFMT2(2,1)="T" THEN ENTRY
+          IF TMRS_GRP_NAME="" THEN WRITE " ",TMRS_1
+          IF TMRS_GRP_NAME<>"" THEN WRITE " ",TMRS_GRP_NAME
+       EXIT
+  EXIT
+
+;    IF FK=#10 AND SHMTESTING=0 AND FAPATN(7,3)<>"OSC" AND ORGNUM=8  THEN ENTRY 
+;      WRITE /,STEP," ",CSN," ","TN=",ASCII(TN,2,5,0," "),ASCII(LP5VD2/1V,2,6,3," "),"V",ASCII(LP5VD2L/1V,2,6,3," "),"V",ASCII(LP5VDQ/1V,2,6,3," "),"V",ASCII(LP5TCK/1PS,2,7,1," "),"PS"
+;      WRITE  ," ",FREQ," ",FAFMT1," ",FAMOD2," ",ASCII(HSDOCNT,2,1,0," ")," ",FAPATN," ",ASCII(AA/1S,1,6,1," "),ASCII(CC/1S,1,6,2," "),"   ", DSPREPA(1,TP)
+;      WRITE  ,"_(",DSPREPA(1*TP+1,TP),")(",DSPREPA(2*TP+1,TP),")(",DSPREPA(3*TP+1,TP),")(",DSPREPA(4*TP+1,TP),")",DSPREPA(5*TP+1,TP),")(",DSPREPA(6*TP+1,TP),")(",DSPREPA(7*TP+1,TP),")(",DSPREPA(8*TP+1,TP),")"
+;    EXIT
+
+
+;------------------------------------------------------------------------------------------------------------------
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+; NG CHECK LOGIC
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+   IF NRTFLG=2 AND FAPAT2(5,3)="NGC" THEN ENTRY
+     GOSUB NGCHK1
+     GOTO LOOPCTRL
+   EXIT
+
+;--------------------------------------------------------------------------------------------------------------------------
+; NRT LOGIC
+;--------------------------------------------------------------------------------------------------------------------------
+   IF NRTFLG=0 THEN ENTRY          ;;NRT
+      IF FAFBIN<>0 THEN GOSUB FCHK
+      GOSUB FBIN(FAFBIN,FASBIN)    ;;NORMAL REJECTION
+   EXIT
+   ELSE ENTRY
+;;==================  NO REJECTION TEST LOGIC =====================
+ 
+     NFDUT=CFDUT.AND.(.NOT.TFDUT).AND.CURDUT
+    ;NFDUT(1)=CFDUT(1).AND.(.NOT.TFDUT(1)).AND.CURDUT(1)
+    ;NFDUT(3)=CFDUT(3).AND.(.NOT.TFDUT(3)).AND.CURDUT(3)
+     GOSUB NRNCHK(TN,FATT)
+     IF FAFBIN<0 OR FAFBIN>8 THEN ENTRY
+        GOSUB FBIN(8,008)
+        GOTO TEXT
+     EXIT
+ 
+     IF FAFBIN=0 THEN ENTRY
+        IF MAX(NFDUT)>#0 THEN ENTRY
+           SET JDUT NFDUT
+           SET FAIL TN
+           RESET JDUT
+        EXIT
+     EXIT
+ 
+     IF FAFBIN>0 AND FAFBIN<=8 THEN ENTRY
+        IF MAX(NFDUT)>#0 THEN ENTRY
+           SET JDUT NFDUT
+           TEST TN
+           SET FAIL TN
+           GOSUB FCHK
+           SET CATEGORY FASBIN
+           SET SORT FAFBIN
+           RESET JDUT
+        EXIT
+       ;TFDUT(1)=TFDUT(1).OR.CFDUT(1)
+       ;TFDUT(3)=TFDUT(3).OR.CFDUT(3)
+        TFDUT=TFDUT.OR.CFDUT
+        TFDUT=TFDUT.OR.CFDUT
+     EXIT
+    ;WRITE /,"NFDUT = ",NFDUT
+    ;WRITE /,"CFDUT = ",CFDUT
+    ;WRITE /,"TFDUT = ",TFDUT
+    ;WRITE /,"CRDUT = ",CURDUT
+;;==================  NO REJECTION TEST LOGIC =====================
+   EXIT
+
+
+LOOPCTRL:
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;  ******  TEST LOOPING CONTORL LOGIC START  ******
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+    INXCHK=0
+     IF SHMTESTING=1 OR DOUMI_SHM="Y" OR HSDOSEL="E" OR HSDOSEL="O" THEN GOTO FSKP   ; ONLY SHMTEST
+     IF FAMOD2(4,1)="D" AND HSDOCNT=1 THEN ENTRY & HSDOCNT=2 & GOTO C2TSTF & EXIT
+
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+;  ******  TEST LOOPING CONTORL LOGIC END    ******
+;;--------------------------------------------------------------------------------------------------------------------------------------------------------
+ HSHME:                          ;HSUSHM
+ FSKP:
+     GOSUB WHINDX     ;; Return Real IOFLG VALUE @ DDPFLG=7 Case & INDEX REFRESH EVERY CYCLE
+     TEST TN       ;; TEST NO. INITIALIZE
+     TSAC=0NS
+     
+       AAY6:
+
+     
+GOTO CONT
