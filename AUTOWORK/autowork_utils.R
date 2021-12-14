@@ -11,6 +11,7 @@ wrangling <- function(files){
     
     part <- regmatches(dat, regexpr('[A-Z0-9]+[-][A-Z0-9]+[-][A-Z0-9]+', dat))
     part2 <- paste0(substr(part, 1, 10), substr(part, 23, 25))
+    lot <- substr(regmatches(dat, regexpr('LOT_ID=[A-Z0-9]+', dat)), 8, 100)
     step <- regmatches(dat, regexpr('T0[0-9][0-9][A-Z0-9]+', dat))
     test_model <- substr(regmatches(dat, regexpr('TESTER_MODEL=[A-Z0-9]+', dat)), 14 , 100)
     tester <- substr(regmatches(dat, regexpr('TESTER=[a-z0-9]+', dat)), 8 , 100)
@@ -40,7 +41,7 @@ wrangling <- function(files){
       str_replace_all(' =', '=') %>% 
       str_replace_all(': ', ':') %>% 
       str_replace_all(' :', ':') %>% 
-      str_remove_all('DO=|FU=|HB=|CB=|NB=|DU=|SG=|HTEMP=|MV=|DCT|FBIN=|PBIN=|TAG=|ACT|FPE|ZQ|IDT|TRV|IBIS|FPN|SPIN|OPIN') %>% 
+      str_remove_all('DO=|FU=|HB=|CB=|SB=|NB=|DU=|SG=|HTEMP=|MV=|DCT|FBIN=|PBIN=|TAG=|ACT|FPE|ZQ|IDT|TRV|IBIS|FPN|SPIN|OPIN') %>% 
       str_replace_all('\\s+', ' ') %>% 
       str_trim() 
     
@@ -52,10 +53,15 @@ wrangling <- function(files){
       str_split_fixed(' ', n_col) %>% 
       as.data.frame() %>% 
       mutate(cycle = rawdata$cycle)
+    
+    
+    # Set Colnames(WH LF /  HF)
 
-    # Set Colnames(HF)
-
-    if(part2 %in% c('K4F8E3D4HF7UP', 'K4F4E3S4HF7UQ', 'K4F4E3S4HF7WL')){
+    if(part2 %in% c('K3KL3L30CM9AH') & substr(step, 1, 3) == 'T07'){
+      
+      names(dat)[1:12] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'SB', 'DU', 'SG', 'HTEMP', 'FBIN', 'PBIN', 'TAG')
+      
+    }else if(part2 %in% c('K4F8E3D4HF7UP', 'K4F4E3S4HF7UQ', 'K4F4E3S4HF7WL')){
 
       names(dat)[1:10] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_F', 'tPD')
 
@@ -71,7 +77,7 @@ wrangling <- function(files){
 
       names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD')
 
-    }else if(part2 %in% c('K3KL3L30CM9AH')|
+    }else if(part2 %in% c('K3KL3L30CM9AH') |
                           substr(part2, 1, 10) %in% c('K3LK7K70BM', 'K3LK6K60BM')){
 
       names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD')
@@ -83,9 +89,14 @@ wrangling <- function(files){
     dat <- cbind(dat, SG)
     
     dat$part <- part
+    dat$lot <- lot
     dat$step <- step
     dat$test_model <- test_model
     dat$tester <- tester
+    
+    ### SG change to numeric when it has ONLY NUMBERS!!!
+    
+    dat$SG <- paste0('0x', dat$SG)
     
     return(dat)
     
@@ -120,7 +131,7 @@ wrangling <- function(files){
 
 sig_converting <- function(dat){
   
-  PKGMAP <- read.table('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\PKGMAP.txt', 
+  PKGMAP <- read.table('your path\\PKGMAP.txt', 
                        fill = T,
                        header = T)
   
@@ -172,7 +183,7 @@ tPD_plot <- function(dat){
   tPD <- dat %>%
     mutate(tPD = round(tPD, 0),
            NB_L = ifelse(NB == 0, 0, 1)) %>% 
-    filter(tPD > 40 & tPD < 70) %>% 
+    filter(tPD > 40 & tPD < 80) %>% 
     group_by(tPD) %>%
     summarise(YLD = 1 - mean(NB_L),
               n = n(),
@@ -226,6 +237,7 @@ byRUN_plot <- function(dat){
   byRUN <- dat %>% 
     mutate(tPD = round(tPD, 0),
            NB_L = ifelse(NB == 0, 0, 1)) %>% 
+    filter(x < 150 & y < 150) %>% 
     group_by(run) %>% 
     summarise(n = n(),
               YLD = (1-mean(NB_L))*100,
@@ -264,7 +276,8 @@ tPDRUN_plot <- function(dat){
   run_16 <- dat %>% group_by(run) %>% tally %>% arrange(desc(n)) %>% head(16)
   
   WFmap_tPD <- dat %>% 
-    filter(tPD >= 40 & run %in% run_16$run) %>% 
+    filter(tPD >= 40 & run %in% run_16$run &
+             x < 150 & y < 150) %>% 
     group_by(x, y, run) %>% 
     summarise(tPD = mean(tPD),
               n = n(),
@@ -315,7 +328,7 @@ MAPRUN_plot <- function(dat){
   run_16 <- dat %>% group_by(run) %>% tally %>% arrange(desc(n)) %>% head(16)
   
   WFmap <- dat %>% 
-    filter(x > 0 & y > 0) %>%
+    filter(x > 0 & y > 0 & x < 150 & y < 150) %>%
     mutate(tPD = round(tPD, 0),
            NB_L = ifelse(NB == 0, 0, 1)) %>% 
     filter(run %in% run_16$run) %>% 
