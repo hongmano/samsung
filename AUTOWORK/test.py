@@ -15,6 +15,7 @@ lscl = input('이상처리?(y/n) :   ')
 
 lot_list = input('Lot List(sep = ' ') :   ')
 lot_list = lot_list.split(' ')
+auto = input('AUTO향?(y/n) : ')
 
 folder = input('폴더명 :   ')
 
@@ -35,7 +36,7 @@ def save_data(file_list):
         
         # Convert to ASCII Code
         
-        data = data.decode('ascii') 
+        data = data.decode('unicode_escape') 
         data = data.split('\n')
         
         # to CSV File
@@ -46,25 +47,34 @@ def save_data(file_list):
 
 pmapftp = ftplib.FTP("12.98.17.50")
 pmapftp.login("pkgmap","pmap01")
-pmapftp.cwd('/Pkgmap1/PkgBackUp/RawData/PKG_AZ/')
-os.chdir('C:/Users/mano.hong/Desktop/AUTOWORK')
+
+if auto == 'y':
+	pmapftp.cwd('/Solution/Automotive/PKG_Raw/2021')
+else:
+	pmapftp.cwd('/Pkgmap1/PkgBackUp/RawData/PKG_AZ/')
+
+os.chdir('your path')
 
 # Get LOT ###
 
 if not os.path.exists(folder):
     os.makedirs(folder)
 
-os.chdir('C:/Users/mano.hong/Desktop/AUTOWORK/' + folder)
+os.chdir('your path' + folder)
 
 for lot in tqdm(lot_list):
 
-        pmapftp.cwd('/Pkgmap1/PkgBackUp/RawData/PKG_AZ/' + lot[0:3])
+        if auto == 'y':
+            pmapftp.cwd('/Solution/Automotive/PKG_Raw/2021/' + lot[0:3])
+        else:
+            pmapftp.cwd('/Pkgmap1/PkgBackUp/RawData/PKG_AZ/' + lot[0:3])
+
         file_list = pmapftp.nlst()
         mylot_data = []
         
         for data in file_list:
         
-            	if lot+'_' in data:
+            	if lot + '_' in data:
 
                     mylot_data.append(data)
                     
@@ -83,16 +93,16 @@ for lot in tqdm(lot_list):
 
         else:
             
-            os.chdir('C:/Users/mano.hong/Desktop/AUTOWORK/' + folder)
+            os.chdir('your path' + folder)
             
             if not os.path.exists(lot):
                 os.makedirs(lot)
                 
-            os.chdir('C:/Users/mano.hong/Desktop/AUTOWORK/' + folder + '/' + lot)
+            os.chdir('your path' + folder + '/' + lot)
             save_data(mylot_data)
                         
 
-os.chdir('C:/Users/mano.hong/Desktop/AUTOWORK')
+os.chdir('your path')
 order = 'rscript autowork.R ' + lscl + ' ' + folder
 
 os.system(order)
