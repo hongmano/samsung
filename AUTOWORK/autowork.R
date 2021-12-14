@@ -8,8 +8,8 @@ if(!suppressMessages(require(reshape2))){install.packages('reshape2')}; require(
 if(!suppressMessages(require(BMS))){install.packages('BMS')}; require(BMS)
 if(!suppressMessages(require(lubridate))){install.packages('lubridate')}; require(lubridate)
 if(!suppressMessages(require(ggplot2))){install.packages('ggplot2')}; require(ggplot2)
-if(!suppressMessages(require(xlsx))){install.packages('ggplot2')}; require(ggplot2)
-source('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\autowork_utils.R')
+if(!suppressMessages(require(xlsx))){install.packages('xlsx')}; require(xlsx)
+source('your path\\autowork_utils.R')
 
 cmd <- commandArgs()
 
@@ -18,7 +18,7 @@ cmd <- commandArgs()
 
 lscl <- cmd[6]
 folder <- cmd[7]
-myfolder <- paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder)
+myfolder <- paste0('your path\\', folder)
 setwd(myfolder)
 
 if(lscl == 'n'){
@@ -43,7 +43,7 @@ if(lscl == 'n'){
     dat <- wrangling(file_list) %>% 
       mutate(tPD = as.numeric(tPD))
     
-    write.csv(dat, 'fin.csv', row.names = F)
+    fwrite(dat, 'fin.csv', row.names = F)
     
     tPD_plot(dat)
     NB_plot(dat)
