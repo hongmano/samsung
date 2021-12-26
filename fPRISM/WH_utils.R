@@ -201,11 +201,33 @@ sig_converting <- function(dat){
   
 }
 
+prism <- function(dat){
+  
+  fprism <- list()
+  for(i in 1:30){
+    
+    fprism[[i]] <- dat %>% 
+      select(SG, paste0('V', (252+(8*(i-1))+1):(252+(8*(i-1))+8))) %>% 
+      `colnames<-`(c('SG', 'TN', 'prism', 'BANK', 'X_1', 'X_2', 'X_3', 'X-4', 'FBC')) %>% 
+      filter(TN != '____') %>% 
+      mutate(TN = as.numeric(TN)) %>% 
+      inner_join(read.table('C:/Users/mano.hong/Desktop/AUTOWORK/condition.txt',
+                            header = T,
+                            fill = T),
+                 by = 'TN')
+  }
+  
+  fprism <- rbindlist(fprism) %>% 
+    mutate(BANK = substr(BANK, 1, 2))
+  fprism <- split(fprism, fprism$ITEM)
+  
+  return(fprism)
+}
 
 # 3. Plotting -------------------------------------------------------------
 
 health_index <- function(dat){
-  
+
   dat %>% 
     select(SG, paste0('V', 105:120)) %>% 
     `colnames<-`(c('SG', rep(paste0(rep(c('A', 'B', 'C', 'D'), 4), rep(0:3, each = 4))))) %>% 
@@ -219,11 +241,176 @@ health_index <- function(dat){
     theme_bw()+
     labs(x = 'Bank',
          y = 'Health Index',
-         title = 'Health Index(가안)') +
+         title = 'Health Index(°¡¾È)') +
     theme(legend.position = 'none')
   
   ggsave('Health_Index.png')
   
 }
 
+##### 2.
 
+FBCbyITEM <- function(dat){
+  
+  table_join <- data.frame(ITEM = rep(rep(c('C2','GF', 'MB', 'SBD', 'ST0', 'ST1'), each = 3), 9),
+                           condition = rep(c('40', '48', '56', '16', '18', '20', '40', '48', '56', '160', '200', '240', '40', '48', '56', '40', '48', '56'), 9),
+                           FBC = rep(c(paste0(1:5, 'bit'), '~ 10bit', '~ 100bit', '~ 1000bit', '1000bit ~'), each = 18))
+  
+  test2 <- dat %>%
+    select(SG, paste0('V', 123:140)) %>%
+    `colnames<-`(c('SG',
+                   'GF_16', 'GF_18', 'GF_20',
+                   'ST1_40', 'ST1_48', 'ST1_56',
+                   'ST0_40', 'ST0_48', 'ST0_56',
+                   'SBD_160', 'SBD_200', 'SBD_240',
+                   'MB_40', 'MB_48', 'MB_56',
+                   'C2_40', 'C2_48', 'C2_56')) %>%
+    melt(id.vars = 'SG') %>%
+    mutate(value = as.numeric(value),
+           ITEM = str_split_fixed(variable, '_', 2)[, 1],
+           condition = str_split_fixed(variable, '_', 2)[, 2],
+           FBC = ifelse(value <= 5, paste0(value, 'bit'),
+                        ifelse(value <= 10, '~ 10bit',
+                               ifelse(value <= 100, '~ 100bit',
+                                      ifelse(value <= 1000, '~ 1000bit', '1000bit ~'))))) %>%
+    group_by(ITEM, condition, FBC) %>%
+    tally %>%
+    right_join(table_join,
+               by = c('ITEM', 'condition', 'FBC')) %>%
+    mutate(n = ifelse(is.na(n) == T, 0, n),
+           FBC = factor(FBC, levels = c(paste0(1:5, 'bit'), '~ 10bit', '~ 100bit', '~ 1000bit', '1000bit ~'))) %>%
+    arrange(ITEM, condition, FBC) %>%
+    group_by(ITEM, condition) %>%
+    mutate(cumsum = cumsum(n))
+  
+  test2 <- test2 %>%
+    inner_join(test2 %>%
+                 group_by(ITEM, condition) %>%
+                 summarise(n_sum = sum(n),
+                           .groups = 'drop'),
+               by = c('ITEM', 'condition')) %>%
+    mutate(ratio = round(cumsum / n_sum * 100, 1)) %>%
+    select(ITEM, condition, FBC, n, ratio)
+  
+  
+  test2 <- split(test2, test2$ITEM)
+  p <- list()
+  
+  for(i in 1:length(test2)){
+    
+    p[[i]] <- test2[[i]] %>%
+      ggplot(aes(x = FBC,
+                 y = n,
+                 fill = condition)) +
+      geom_bar(stat = 'identity',
+               width = .5,
+               position = position_dodge(width = .7,
+                                         preserve = 'single')) +
+      geom_line(aes(y = ratio * max(n) / 100,
+                    col = condition,
+                    group = condition),
+                size = 1.5) +
+      geom_point(aes(y = ratio * max(n) / 100,
+                     fill = condition,
+                     col = condition),
+                 size = 2) +
+      geom_text(aes(y = ratio * max(n) / 100,
+                    label = paste0(ratio, '%')),
+                position = 'dodge',
+                vjust = -.5,
+                check_overlap = T) +
+      scale_fill_manual(values = c('skyblue', 'grey', 'blue')) +
+      scale_color_manual(values = c('skyblue', 'grey', 'blue')) +
+      theme_bw() +
+      theme(legend.position = c(0.9, 0.5)) +
+      labs(x = '',
+           y = '',
+           title = names(test2)[i])
+    
+  }
+  
+  p <- do.call('grid.arrange', c(p, ncol = 3))
+  grid.arrange(p)
+  
+  ggsave(p , filename =  'FBCbyITEM.png',  width = 18, height = 10, dpi = 300, units = "in", device='png')
+  
+  
+}
+
+byBANK <- function(dat){
+
+  p <- list()
+  
+  for(i in 1:length(fprism)){
+
+    p[[i]] <- fprism[[i]] %>%
+      group_by(condition2, BANK) %>% 
+      tally %>% 
+      ggplot(aes(x = BANK,
+                 y = n,
+                 col = condition2,
+                 fill = condition2)) +
+      geom_point() +
+      geom_line(aes(group = condition2)) +
+      geom_text(aes(label = n), 
+                check_overlap = T, vjust = -.5) +
+      theme_bw() +
+      theme(legend.position = c(0.95, 0.95),
+            legend.justification = c("right", "top"),
+            legend.box.background = element_rect(),
+            legend.box.margin = margin(1, 1, 1, 1)) +
+      labs(x = '',
+           y = '',
+           title = names(fprism)[i])
+    
+  }
+  
+  coln <- ifelse(substr(dat$step[1], 1, 4) == 'T070', 4, 3)
+
+  p <- do.call('grid.arrange', c(p, ncol = coln))
+    
+
+  
+  grid.arrange(p)
+  ggsave(p , filename =  'PRISMbyBANK.png',  width = 18, height = 10, dpi = 300, units = "in", device='png')
+  
+}
+
+byPRISM <- function(dat){
+  
+  p <- list()
+  
+  for(i in 1:length(fprism)){
+
+    p[[i]] <- fprism[[i]] %>%
+      mutate(prism = factor(prism, levels = c('SBIT', paste0(1:8, 'ROW'), '1CMA', '2CMA', paste0(1:4, 'BLK')) )) %>% 
+      group_by(condition2, prism) %>% 
+      tally %>% 
+      ggplot(aes(x = prism,
+                 y = n,
+                 col = condition2)) +
+      geom_point() +
+      geom_line(aes(group = condition2)) +
+      geom_text(aes(label = n), 
+                check_overlap = T, vjust = -.4) +
+      theme_bw() +
+      theme(legend.position = c(0.95, 0.95),
+            legend.justification = c("right", "top"),
+            legend.box.background = element_rect(),
+            legend.box.margin = margin(1, 1, 1, 1),
+      ) +
+      labs(x = '',
+           y = '',
+           title = names(fprism)[i])
+    
+  }
+  
+  coln <- ifelse(substr(dat$step[1], 1, 4) == 'T070', 4, 3)
+  p <- do.call('grid.arrange', c(p, ncol = coln))
+    
+  
+  grid.arrange(p)
+  
+  ggsave(p , filename =  'PRISM.png',  width = 18, height = 10, dpi = 300, units = "in", device='png')
+  
+}
