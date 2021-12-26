@@ -9,7 +9,7 @@ if(!suppressMessages(require(BMS))){install.packages('BMS')}; require(BMS)
 if(!suppressMessages(require(lubridate))){install.packages('lubridate')}; require(lubridate)
 if(!suppressMessages(require(ggplot2))){install.packages('ggplot2')}; require(ggplot2)
 if(!suppressMessages(require(xlsx))){install.packages('xlsx')}; require(xlsx)
-source('your path\\autowork_utils.R')
+source('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\autowork_utils.R')
 
 cmd <- commandArgs()
 
@@ -18,7 +18,7 @@ cmd <- commandArgs()
 
 lscl <- cmd[6]
 folder <- cmd[7]
-myfolder <- paste0('your path\\', folder)
+myfolder <- paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder)
 setwd(myfolder)
 
 if(lscl == 'n'){
@@ -27,7 +27,7 @@ if(lscl == 'n'){
   
   dat <- wrangling(file_list)
   
-  write.csv(dat, 'fin.csv', row.names = F)
+  fwrite(dat, 'fin.csv', row.names = F)
   print('##### Data Save Done #####')
   print('##### END #####')
   
