@@ -8,6 +8,7 @@ if(!suppressMessages(require(reshape2))){install.packages('reshape2')}; require(
 if(!suppressMessages(require(BMS))){install.packages('BMS')}; require(BMS)
 if(!suppressMessages(require(lubridate))){install.packages('lubridate')}; require(lubridate)
 if(!suppressMessages(require(ggplot2))){install.packages('ggplot2')}; require(ggplot2)
+if(!suppressMessages(require(gridExtra))){install.packages('gridExtra')}; require(gridExtra)
 if(!suppressMessages(require(xlsx))){install.packages('xlsx')}; require(xlsx)
 source('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\WH_utils.R')
 
@@ -19,17 +20,26 @@ folder <- cmd[6]
 myfolder <- paste0('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\', folder)
 setwd(myfolder)
 
+folder_list <- list.files()
 
-file_list <- list.files() %>% sort()
-dat <- wrangling(file_list)
-fwrite(dat, 'fin.csv', row.names = F)
+for(i in 1:length(folder_list)){
+  
+  setwd(paste0(myfolder, '\\', folder_list[i]))
+  file_list <- list.files() %>% sort()
+  
+  dat <- wrangling(file_list)
+  fprism <- prism(dat)
+  
+  fwrite(dat, 'fin.csv', row.names = F)
 
-# Health Index
+  # Plotting
+    
+  health_index(dat)
+  FBCbyITEM(dat)
+  byBANK(fprism)
+  byPRISM(fprism)
 
-health_index(dat)
-
-
-
+}
 
 print('##### Data Save Done #####')
 print('##### END #####')
