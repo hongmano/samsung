@@ -226,6 +226,140 @@ prism <- function(dat){
 
 # 3. Plotting -------------------------------------------------------------
 
+
+# 3-2. NB 
+
+NB_plot <- function(dat){
+  
+  plot_NB <- dat %>%
+    mutate(NB = factor(NB),
+           NB_L = ifelse(NB == 0, 0, 1)) %>% 
+    filter(NB_L != 0) %>% 
+    group_by(NB, test) %>% 
+    tally() %>% 
+    arrange(desc(n)) 
+  
+  NN <- plot_NB %>% 
+    filter(test == 0) %>% 
+    head(20)
+  
+  plot_NB <- plot_NB %>%
+    filter(NB %in% NN$NB) %>% 
+    ggplot(aes(x = reorder(NB, -n),
+               y = n)) + 
+    geom_col() +
+    xlab('NG BIN') + 
+    coord_flip() +
+    theme_bw() +
+    facet_wrap( ~ test)
+  
+  ggsave('NB.png', scale = 3)
+  
+}
+
+DUTMAP <- function(dat){
+  
+  dat <- dat %>% 
+    mutate(HB_L = ifelse(HB %in% c(1:4), 'Good',
+                         ifelse(HB %in% c(7:8), 'Env', 'Fail')))
+  
+  HTEMP <- as.numeric(str_split_fixed(dat$HTEMP, ':', 3)[, 1])
+  
+  dat$HTEMP <- HTEMP
+  dat$DU <- factor(dat$DU)
+  dat$cycle <- factor(dat$cycle)
+  
+  
+  ggplot(dat, 
+         aes(x = DU, 
+             y = cycle)) +
+    
+    geom_tile(aes(fill = HB_L), 
+              show.legend = T,
+              na.rm = F,
+              color = 'black') +
+    
+    labs(y = "cycle") +
+    scale_x_discrete(position = "top") +
+    scale_y_discrete(limits = rev(levels(dat$cycle))) + 
+    scale_fill_manual(values = c('Env' = 'red', 'Fail' = 'orange', 'Good' = 'blue')) +
+    theme_bw()
+  
+  ggsave('DUTMAP.jpeg')
+  
+  ggplot(dat, 
+         aes(x = DU, 
+             y = cycle)) +
+    
+    geom_tile(aes(fill = HTEMP), 
+              show.legend = T,
+              na.rm = F,
+              color = 'black') +
+    
+    labs(y = "cycle") +
+    scale_x_discrete(position = "top") +
+    scale_y_discrete(limits = rev(levels(dat$cycle))) + 
+    scale_fill_gradient(high = 'red', low = 'blue') + 
+    theme_bw() +
+    theme(axis.text.x = element_blank())
+  
+  
+  ggsave('TEMPMAP.jpeg')
+  
+}
+
+MAPRUN_plot <- function(dat){
+  
+  run_16 <- dat %>% group_by(run) %>% tally %>% arrange(desc(n)) %>% head(16)
+  
+  WFmap <- dat %>% 
+    filter(x > 0 & y > 0 & x < 150 & y < 150) %>%
+    mutate(NB_L = ifelse(NB == 0, 0, 1)) %>% 
+    filter(run %in% run_16$run) %>% 
+    group_by(x, y, run) %>% 
+    summarise(NB = sum(NB_L),
+              n = n(),
+              .groups = 'drop') %>% 
+    mutate(NB = ifelse(NB == 0, 0, 1)) %>%
+    arrange(desc(n))
+  
+  xmax <- max(WFmap$x, na.rm = T)
+  xmin <- min(WFmap$x, na.rm = T)
+  ymax <- max(WFmap$y, na.rm = T)
+  ymin <- min(WFmap$y, na.rm = T)
+  
+  # plot
+  
+  ggplot(WFmap,
+         aes(x, y)) +
+    
+    coord_cartesian(xlim = c(xmin, xmax), 
+                    ylim = c(ymin, ymax)) +
+    
+    scale_x_continuous(breaks = seq(xmin, xmax)) +
+    scale_y_continuous(breaks = seq(ymin, ymax))+
+    
+    geom_tile(aes(fill = NB),
+              color = 'black')+
+    
+    theme_bw() +
+    theme(
+      panel.background = element_rect(fill = 'white', color = 'white'),
+      panel.grid.major = element_line(color = 'white'),
+      panel.grid.minor = element_line(color = 'white'),
+      legend.position = 'none',
+      axis.text.x = element_blank(),
+      axis.text.y = element_blank()
+    ) +
+    
+    facet_wrap(~ run) +
+    ggtitle('Wafer Map') +
+    scale_fill_gradientn(colors = c('skyblue', 'red'))
+  
+  ggsave('NBRUN.png')
+  
+}
+
 health_index <- function(dat){
 
   dat %>% 
@@ -241,7 +375,7 @@ health_index <- function(dat){
     theme_bw()+
     labs(x = 'Bank',
          y = 'Health Index',
-         title = 'Health Index(°¡¾È)') +
+         title = 'Health Index(가안)') +
     theme(legend.position = 'none')
   
   ggsave('Health_Index.png')
