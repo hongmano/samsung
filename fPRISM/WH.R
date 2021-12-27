@@ -9,7 +9,6 @@ if(!suppressMessages(require(BMS))){install.packages('BMS')}; require(BMS)
 if(!suppressMessages(require(lubridate))){install.packages('lubridate')}; require(lubridate)
 if(!suppressMessages(require(ggplot2))){install.packages('ggplot2')}; require(ggplot2)
 if(!suppressMessages(require(gridExtra))){install.packages('gridExtra')}; require(gridExtra)
-if(!suppressMessages(require(xlsx))){install.packages('xlsx')}; require(xlsx)
 source('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\WH_utils.R')
 
 cmd <- commandArgs()
@@ -36,8 +35,12 @@ for(i in 1:length(folder_list)){
     
   health_index(dat)
   FBCbyITEM(dat)
+  NB_plot(dat)
+  DUTMAP(dat)
+  MAPRUN_plot(dat)
   byBANK(fprism)
   byPRISM(fprism)
+  
 
 }
 
