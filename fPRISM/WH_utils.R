@@ -203,20 +203,24 @@ sig_converting <- function(dat){
 
 prism <- function(dat){
   
+  start <- substr(names(dat)[str_detect(dat[1,], 'PRAS')], 2, 4) %>% as.numeric()
+  end <- substr(names(dat)[str_detect(dat[1,], 'PRAE')], 2, 4) %>% as.numeric()
+  
+  index <- ((end-1)-(start+1)+1) / 8
+  
   fprism <- list()
-  for(i in 1:30){
-    
+  for(i in 1:index){
+
     fprism[[i]] <- dat %>% 
-      select(SG, paste0('V', (252+(8*(i-1))+1):(252+(8*(i-1))+8))) %>% 
+      select(SG, paste0('V', (start+(8*(i-1))+1):(start+(8*(i-1))+8))) %>% 
       `colnames<-`(c('SG', 'TN', 'prism', 'BANK', 'X_1', 'X_2', 'X_3', 'X-4', 'FBC')) %>% 
       filter(TN != '____') %>% 
       mutate(TN = as.numeric(TN)) %>% 
-      inner_join(read.table('C:/Users/mano.hong/Desktop/AUTOWORK/condition.txt',
+      left_join(read.table('C:/Users/mano.hong/Desktop/AUTOWORK/condition.txt',
                             header = T,
                             fill = T),
                  by = 'TN')
   }
-  
   fprism <- rbindlist(fprism) %>% 
     mutate(BANK = substr(BANK, 1, 2))
   fprism <- split(fprism, fprism$ITEM)
@@ -253,7 +257,7 @@ NB_plot <- function(dat){
     theme_bw() +
     facet_wrap( ~ test)
   
-  ggsave('NB.png', scale = 3)
+  ggsave('NB.png')
   
 }
 
@@ -313,10 +317,10 @@ MAPRUN_plot <- function(dat){
   run_16 <- dat %>% group_by(run) %>% tally %>% arrange(desc(n)) %>% head(16)
   
   WFmap <- dat %>% 
-    filter(x > 0 & y > 0 & x < 150 & y < 150) %>%
+    filter(x > 0 & y > 0 & x < 60 & y < 70) %>%
     mutate(NB_L = ifelse(NB == 0, 0, 1)) %>% 
     filter(run %in% run_16$run) %>% 
-    group_by(x, y, run) %>% 
+    group_by(x, y, run, wf) %>% 
     summarise(NB = sum(NB_L),
               n = n(),
               .groups = 'drop') %>% 
@@ -352,7 +356,7 @@ MAPRUN_plot <- function(dat){
       axis.text.y = element_blank()
     ) +
     
-    facet_wrap(~ run) +
+    facet_wrap(~ paste0(run, '_', wf)) +
     ggtitle('Wafer Map') +
     scale_fill_gradientn(colors = c('skyblue', 'red'))
   
@@ -375,7 +379,7 @@ health_index <- function(dat){
     theme_bw()+
     labs(x = 'Bank',
          y = 'Health Index',
-         title = 'Health Index(가안)') +
+         title = 'Health Index(°¡¾È)') +
     theme(legend.position = 'none')
   
   ggsave('Health_Index.png')
