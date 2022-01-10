@@ -14,7 +14,7 @@ fPRISM
   - WH.R : Main PGM
 
 MBTIDD
-  - MBTIDD.R : ps file from OSCAR to MBTIDD Plot
+  - MBTIDD.R : MBTIDD Plot via MBT PS files from OSCAR
 
 MONYLD
   - MONYLD.R : Calculate YLD from EPIC(U) Log
