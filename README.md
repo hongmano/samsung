@@ -1,7 +1,7 @@
 # samsung
 
 AUTOWORK
-  - test.py : PKGMAP Download from ftp Server (Test Technology Team @김채영)
+  - test.py : PKGMAP Download from ftp Server (Test Technology Team @KCY)
   - autowork_utils.R : Set PKGMAP to csv file & Visualize (source code)
   - autowork.R : Main PGM
   - PGKMAP.txt : Convertion Signature Code to Line/Prod/Month etc.
@@ -9,7 +9,7 @@ AUTOWORK
 fPRISM
   - condition.txt : Test condition of fPRISM item
   - PGKMAP.txt : Convertion Signature Code to Line/Prod/Month etc.
-  - WH.py : PKGAMP Download form ftp Server (Test Technology Team @김채영)
+  - WH.py : PKGAMP Download form ftp Server (Test Technology Team @KCY)
   - WH_utils : Set PKGMAP to csv file & Visualize (source code)
   - WH.R : Main PGM
 
