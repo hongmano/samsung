@@ -37,4 +37,4 @@ WF_Edge_ASSY
   - simulation.R : Estimate the Gain within ASSY Logic with Monte-Carlo Simulation
 
 EVEN2ODD
-  - code.R : Convert EPIC Even Patn to ODD Patn (It Converts Expected value ONLY)
+  - Converter.R : Convert EPIC Even Patn to ODD Patn (It Converts Expected value ONLY)
