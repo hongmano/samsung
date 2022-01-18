@@ -35,3 +35,6 @@ RUN_SORT
 WF_Edge_ASSY
   - utils.R : Simulation of ASSY Logic (E1, E2, E1+E2, SRS etc.)
   - simulation.R : Estimate the Gain within ASSY Logic with Monte-Carlo Simulation
+
+EVEN2ODD
+  - code.R : Convert EPIC Even Patn to ODD Patn (It Converts Expected value ONLY)
