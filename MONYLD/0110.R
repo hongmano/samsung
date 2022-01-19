@@ -4,120 +4,138 @@ library(data.table)
 
 setwd('C:/Users/mano.hong/Desktop/AUTOWORK/WH_D_AMP/Cold Log')
 
-dat <- list.files()
-dat <- dat[str_detect(dat, '.txt')]
-dat_list <- list()
-result <- list()
+files <- list.files()
+files <- files[str_detect(files, '.txt')]
+
+
+dat <- readLines(files[12])
+
+# Start Point of Cycle
+
+log_start <- c(str_which(dat, 'SGH_MSG=RUNLOTID'), length(dat))
+
+# ?th Retest
+
+REGFLG <- substr(regmatches(dat, regexpr('RETFLG = [0-9]+', dat)), 10, 10)
+
+# Wrangling
+
+dat <- data.frame(code = dat,
+                  REGFLG = '?',
+                  cycle = 0)
+
+for(j in 1:length(REGFLG)){
+  
+  dat$REGFLG[log_start[j]:log_start[j+1]] <- REGFLG[j]
+  dat$cycle[log_start[j]:log_start[j+1]] <- j
+  
+}
+
+# Filter < 1000 row cycle
+
+real <- dat %>% 
+  group_by(cycle) %>% 
+  tally %>% 
+  filter(n > 1000) %>% 
+  select(cycle)
+
+dat <- dat %>% 
+  filter(REGFLG == '0' & cycle %in% real$cycle)
+
+# Split
+
+dat <- split(dat, dat$cycle)
 
 for(i in 1:length(dat)){
 
-  dat_list[[i]] <- readLines(dat[i])
+  ### PKGMAP (SG, DU, DO, tPD)
   
-  log_start <- c(str_which(dat_list[[i]], 'SGH_MSG=RUNLOTID'), length(dat_list[[i]]))
-  REGFLG <- substr(regmatches(dat_list[[i]], regexpr('RETFLG = [0-9]+', dat_list[[i]])), 10, 10)
+  PKGMAP <- dat[[i]]$code[dat[[i]]$code %>% str_which('PMAP: ')]
   
-  dat_list[[i]] <- data.frame(code = dat_list[[i]],
-                              REGFLG = '?',
-                              cycle = 0)
+  SG <- substr(PKGMAP, 14, 31)
+  DU <- substr(PKGMAP, 9, 9) %>% as.numeric()
+  DO <- substr(PKGMAP, 12, 12) %>% as.numeric()
   
-  for(j in 1:length(REGFLG)){
-    
-    dat_list[[i]]$REGFLG[log_start[j]:log_start[j+1]] <- REGFLG[j]
-    dat_list[[i]]$cycle[log_start[j]:log_start[j+1]] <- j
-    
-  }
+  PKGMAP <- data.frame(SG, DU, DO)
+ 
+  tPD <- dat[[i]]$code[dat[[i]]$code %>% str_which('TPD2  n/p')] %>% 
+    str_remove_all('TPD2  n/p  : ') %>% 
+    str_remove_all('[1-8] \t') %>% 
+    str_remove_all('\t') %>%  
+    str_replace_all('\\s+', ' ') %>% 
+    str_trim %>% 
+    str_split_fixed(' ', 4) %>% 
+    as.data.frame() %>% 
+    unlist
+
+  plate <- data.frame(DU = rep(1:4, each = 4),
+                      DO = rep(1:4, 4)) %>% 
+    left_join(PKGMAP) %>% 
+    mutate(tPD = tPD)
   
-  real <- dat_list[[i]] %>% 
-    group_by(cycle) %>% 
-    tally %>% 
-    filter(n > 1000) %>% 
-    select(cycle)
-  
-  dat_list[[i]] <- dat_list[[i]] %>% 
-    filter(REGFLG == '0' & cycle %in% real$cycle)
-  
-  dat_list[[i]] <- split(dat_list[[i]], dat_list[[i]]$cycle)
-  
-  for(z in 1:length(dat_list[[i]])){
-    
-    Sig <- substr(dat_list[[i]][[z]]$code[dat_list[[i]][[z]]$code %>% str_which('PMAP: ')], 14, 31)
-    DUT <- substr(dat_list[[i]][[z]]$code[dat_list[[i]][[z]]$code %>% str_which('PMAP: ')], 9, 9)
-    Ch <- substr(dat_list[[i]][[z]]$code[dat_list[[i]][[z]]$code %>% str_which('PMAP: ')], 12, 12)
-    tPD <- dat_list[[i]][[z]]$code[dat_list[[i]][[z]]$code %>% str_which('TPD2  n/p')] %>% 
-      str_remove_all('TPD2  n/p  : ') %>% 
-      str_remove_all('[1-8] \t') %>% 
-      str_remove_all('\t') %>%  
-      str_replace_all('\\s+', ' ') %>% 
-      str_trim %>% 
-      str_split_fixed(' ', 4) %>% 
-      as.data.frame() %>% 
-      unlist
-    
-    test <- dat_list[[i]][[z]]$code[dat_list[[i]][[z]]$code %>% str_which('HF[CH] R0  3[5-7][7-9][1-8]')] %>% 
-      str_remove_all('\\[') %>% 
-      str_remove_all('\\]') %>% 
-      str_split_fixed(' ', 22) %>% 
-      as.data.frame() %>% 
-      rename(TN = V4,
-             power = V6,
-             HSDO = V12,
-             PATN = V13,
-             DUTPASS = V14,
-             CHPASS = V20,
-             DOE = V22) %>% 
-      select(!starts_with('V'))
-    
-    
-    
-    test <- test %>% 
-      mutate(
-        
-        CHPASS_A = ifelse(substr(DUTPASS, 1, 1) == '-', '----', substr(CHPASS, 1, 4)),
-        
-        CHPASS_B = ifelse(substr(DUTPASS, 2, 2) == '-', '----',
-                          ifelse(str_count(substr(DUTPASS, 1, 2), '-') == 1, substr(CHPASS, 1, 4), substr(CHPASS, 5, 8))),
-        
-        CHPASS_C = ifelse(substr(DUTPASS, 3, 3) == '-', '----',
-                          ifelse(str_count(substr(DUTPASS, 1, 3), '-') == 2, substr(CHPASS, 1, 4),
-                                 ifelse(str_count(substr(DUTPASS, 1, 3), '-') == 1, substr(CHPASS, 5, 8), substr(CHPASS, 9, 12)))),
-        
-        CHPASS_D = ifelse(substr(DUTPASS, 4, 4) == '-', '----',
-                          ifelse(str_count(substr(DUTPASS, 1, 3), '-') == 3, substr(CHPASS, 1, 4),
-                                 ifelse(str_count(substr(DUTPASS, 1, 3), '-') == 2, substr(CHPASS, 5, 8),
-                                        ifelse(str_count(substr(DUTPASS, 1, 3), '-') == 1, substr(CHPASS, 9, 12), substr(CHPASS, 13, 16))))),
-        
-        CHPASS_real = paste0(CHPASS_A, CHPASS_B, CHPASS_C, CHPASS_D)
-        
-      )
-  
-    device <- cbind(DUT, Ch, Sig)
-    
-    
-    result[[i]][[z]] <- data.frame(DUT = rep(1:4, each = 4),
-                                 Ch = rep(1:4, 4))
+  ### Function 
+
+  func <- dat[[i]]$code[dat[[i]]$code %>% str_which('HF[CH] R0  [0-9]+ [0-9]+')] %>% 
+    str_remove_all('\\[') %>% 
+    str_remove_all('\\]') %>% 
+    str_split_fixed(' ', 22) %>% 
+    as.data.frame() %>% 
+    filter(V12 %in% c(1,2) & V4 != 4996) %>% 
+    select(V4, V5, V6, V7, V9, V12, V13, V14, V20, V22) %>% 
+    `colnames<-`(c('TN', 'HB', 'VDD2H', 'VDD2L', 'tCK', 'HSDO', 'PATN', 'DUT', 'CH', 'DOE')) %>% 
+    mutate(
       
+      CH_A = ifelse(substr(DUT, 1, 1) == '-', '----', substr(CH, 1, 4)),
+      
+      CH_B = ifelse(substr(DUT, 2, 2) == '-', '----',
+                        ifelse(str_count(substr(DUT, 1, 2), '-') == 1, substr(CH, 1, 4), substr(CH, 5, 8))),
+      
+      CH_C = ifelse(substr(DUT, 3, 3) == '-', '----',
+                        ifelse(str_count(substr(DUT, 1, 3), '-') == 2, substr(CH, 1, 4),
+                               ifelse(str_count(substr(DUT, 1, 3), '-') == 1, substr(CH, 5, 8), substr(CH, 9, 12)))),
+      
+      CH_D = ifelse(substr(DUT, 4, 4) == '-', '----',
+                        ifelse(str_count(substr(DUT, 1, 3), '-') == 3, substr(CH, 1, 4),
+                               ifelse(str_count(substr(DUT, 1, 3), '-') == 2, substr(CH, 5, 8),
+                                      ifelse(str_count(substr(DUT, 1, 3), '-') == 1, substr(CH, 9, 12), substr(CH, 13, 16))))),
+      
+      CH = paste0(CH_A, CH_B, CH_C, CH_D)
+      
+    ) %>% 
+    select(-starts_with('CH_'))
   
+  # HSDO & non-HSDO
   
-    # result[[i]][[z]] <- data.frame(
-    #   
-    #   SG = Sig,
-    #   DU = DUT,
-    #   CH = Ch, 
-    #   tPD = tPD,
-    #   TN = test$TN,
-    #   power = test$power,
-    #   HSDO = test$HSDO,
-    #   PATN = test$PATN,
-    #   DUTPASS = test$DUTPASS,
-    #   CHPASS = test$CHPASS,
-    #   DOE = test$CHPASS_real
-    #   
-    #   )
+  even <- func %>% filter(HSDO == 1)
+  odd <- func %>% filter(HSDO == 2)
+  other <- even %>% filter(!PATN %in% odd$PATN)
+  even <- even %>% filter(!PATN %in% other$PATN)
+  
+  HSDO <- even %>% select(TN, HB, VDD2H, VDD2L, tCK, PATN, DOE, CH) %>% 
+    rename(CH_even = CH) %>% 
+    inner_join(odd %>% select(TN, HB, VDD2H, VDD2L, tCK, PATN, DOE, CH) %>% 
+                 rename(CH_odd = CH))
+  
+  # Merge HSDO Result
+  
+  even <- HSDO$CH_even %>% 
+    str_split_fixed('', 16) %>% 
+    as.data.frame() %>% 
+    mutate(TN = HSDO$TN) %>%
+    melt(id.vars = c('TN'))
+  
+  odd <- HSDO$CH_odd %>% 
+    str_split_fixed('', 16) %>% 
+    as.data.frame() %>% 
+    mutate(TN = HSDO$TN) %>%
+    melt(id.vars = c('TN'))
+  
+  even_odd <- rbind(even, odd) %>% 
+    mutate(value = ifelse(value == 'P', 1,
+                          ifelse(value == '*', 0, NA))) %>% 
+    group_by(TN, variable) %>% 
     
+  
+  
+
   }
-  
-  
-}
-  
-finfin <- rbindlist(result)
-  
