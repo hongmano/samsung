@@ -33,6 +33,9 @@ log_summary <- function(file, DP, result){
     
   }
   
+  dat <- dat %>% 
+    filter(REGFLG == 0)
+  
   # Filter < 1000 row cycle
   
   real <- dat %>% 
@@ -284,3 +287,4 @@ CH$YLD <- round(CH$value / CH$CH_NUM * 100 ,2)
 tPD$YLD <- round(tPD$value / tPD$tPD_NUM * 100 ,2)
 
 # Summary -----------------------------------------------------------------
+
