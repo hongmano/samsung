@@ -9,16 +9,16 @@ library(BMS)
 
 # 2. Data Loading ---------------------------------------------------------
 
-setwd('C:/Users/mano.hong/Desktop/even/even')
+setwd('C:/Users/mano.hong/Desktop/even/220119/even')
 
 
 files <- list.files()
 files <- files[str_detect(files, '.pat')]
 
 for(index in 1:length(files)){
-  
-  setwd('C:/Users/mano.hong/Desktop/even/even')
 
+  setwd('C:/Users/mano.hong/Desktop/even/220119/even')
+  
   dat <- readLines(files[index]) %>% 
     str_replace_all('#define E_', '#define O_') %>% 
     str_replace_all('-IFE A E', '-IFE A O')
@@ -26,15 +26,48 @@ for(index in 1:length(files)){
   # 3. Extract RD -----------------------------------------------------------
   
   # EPIC PATN START
-  RD[i]
-  RD <- str_which(dat, ' d[1_][1_]           RD')
-  dat_list <- list()
-  for(i in 1:length(RD)){
 
-    dat_list[[i]] <- data.frame(code = dat[(RD[i]):(RD[i]+3)]) %>% 
+  RD <- str_which(dat, ' d[1_][1_][a-zA-Z0-9_\\s+]+RD')
+  
+  dat_list <- list()
+
+  for(i in 1:length(RD)){
+    
+    bit_list <- list()
+    
+    for(bit in 1:4){
+
+      bit <- bit - 1
+      if(length(bit_list) > 0){
+        
+        bit <- bit_list[[length(bit_list)]] + 1
+        
+      }
+      
+      repeat{
+        
+        bit_judge <- dat[RD[i]+bit] %>% str_detect('R[0-1]+')
+        
+        if(sum(bit_judge, na.rm = T) == 1){
+          bit_list <- append(bit_list, bit)
+          break
+        }
+        bit <- bit + 1
+        msg <- paste0('PATN : ', files[index],
+                      ' RD : ', RD[i],
+                      ' DATA : ', bit, 'th')
+        print(msg)
+        }
+      }
+    
+    dat_list[[i]] <- data.frame(code = dat[c(RD[i] + bit_list[[1]],
+                                             RD[i] + bit_list[[2]],
+                                             RD[i] + bit_list[[3]],
+                                             RD[i] + bit_list[[4]])]) %>% 
       mutate(line = 1:4,
              data = regmatches(code, regexpr('R[0-1][0-1][0-1][0-1]', code)))
-    
+
+        
     even <- c(1,3,5,7,9,11,13,15)
     odd <- even+1
     
@@ -54,7 +87,10 @@ for(index in 1:length(files)){
     data_location <- str_locate_all(dat_list[[i]]$code[1], 'RD\\([0-9,a-z]+\\)') %>% unlist %>% min
     substr(dat_list[[i]]$code[1], data_location+5, data_location+6) <- data
     
-    dat[(RD[i]):(RD[i]+3)] <- dat_list[[i]]$code
+    dat[c(RD[i] + bit_list[[1]],
+          RD[i] + bit_list[[2]],
+          RD[i] + bit_list[[3]],
+          RD[i] + bit_list[[4]])] <- dat_list[[i]]$code
     
     name <- files[index]
     substr(name, nchar(name)-4, nchar(name)-4) <- 'O'
@@ -82,5 +118,8 @@ for(index in 1:length(files)){
   writeLines(dat, name)
   
 }
+
+
+# CHK ---------------------------------------------------------------------
 
 
