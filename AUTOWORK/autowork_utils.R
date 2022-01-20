@@ -22,11 +22,11 @@ wrangling <- function(files){
       mutate(cycle = 1)
     
     cycle <- c(str_which(dat, 'LOADERSIDE'), nrow(rawdata))
-
+    
     for(i in 1:(length(cycle)-1)){
       
       rawdata$cycle[cycle[i]:cycle[i+1]] <- i
-      
+    
     }
     
     rawdata <- rawdata[str_detect(rawdata$dat, 'DO='), ]
@@ -56,10 +56,32 @@ wrangling <- function(files){
     
     
     # Set Colnames(WH LF /  HF)
-
+    
+    
+    # WH LF
     if(part2 %in% c('K3KL3L30CM9AH') & substr(step, 1, 3) == 'T07'){
       
       names(dat)[1:12] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'SB', 'DU', 'SG', 'HTEMP', 'FBIN', 'PBIN', 'TAG')
+  
+        # NU AUTO(G2) T070 T5375 / T5377
+      
+    }else if(part2 %in% c('K4F4E3S4HF7WL') & substr(step, 1, 4) == 'T070' & test_model != 'T5833'){
+      
+      names(dat)[1:12] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'SB', 'DU', 'SG', 'HTEMP', 'FBIN', 'PBIN', 'TAG')
+      
+        # NU AUTO(G2) T070 T5388
+      
+    }else if(part2 %in% c('K4F4E3S4HF7WL') & substr(step, 1, 4) == 'T070' & test_model == 'T5833'){
+      
+      names(dat)[1:8] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP')
+
+      # NU AUTO(G2) T071 T5388
+      
+    }else if(part2 %in% c('K4F4E3S4HF7WL') & substr(step, 1, 4) == 'T071'){
+      
+      names(dat)[1:8] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP')
+      
+      ###### HF.
       
     }else if(part2 %in% c('K4F8E3D4HF7UP', 'K4F4E3S4HF7UQ', 'K4F4E3S4HF7WL')){
 
@@ -77,11 +99,17 @@ wrangling <- function(files){
 
       names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD')
 
-    }else if(part2 %in% c('K3KL3L30CM9AH') |
-                          substr(part2, 1, 10) %in% c('K3LK7K70BM', 'K3LK6K60BM')){
+    }else if(part2 %in% c('K3KL3L30CM9AH')){
 
-      names(dat)[1:11] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD')
+      names(dat)[1:15] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD1.0', 'V12', 'V13', 'V14', 'tPD')
 
+    }else if(substr(part2, 1, 10) %in% c('K3LK7K70BM', 'K3LK6K60BM')){
+      
+      names(dat)[1:14] <- c('DO', 'FU', 'HB', 'CB', 'NB', 'DU', 'SG', 'HTEMP', 'tPD_Short', 'tPD_Long', 'tPD1.0', 'V12', 'V13', 'tPD')
+      
+      
+    }else{
+      stop('### Not My Product :) ###')
     }
     
     SG <- dat %>% sig_converting()
@@ -96,7 +124,7 @@ wrangling <- function(files){
     
     ### SG change to numeric when it has ONLY NUMBERS!!!
     
-    dat$SG <- paste0('0x', dat$SG)
+    dat$SG <- paste0('x', dat$SG)
     
     return(dat)
     
@@ -107,15 +135,25 @@ wrangling <- function(files){
   
   for(i in 1:length(files)){
     
+    ### No data Break
+
+    if(length(str_which(readLines(files[i]), 'LOADERSIDE')) == 0) next
+    
     dat_list[[i]] <- w(files[i])
-    dat_list[[i]]$test <- as.numeric(substr(str_sub(files[i], start = -13), 1, 2))
-    file.remove(files[i])
+    dat_list[[i]]$test <- as.numeric(substr(str_split(files[i], '_')[[1]][5], 1, 2))
+
+   # file.remove(files[i])
     
   }
   
-  for(i in 2:length(files)){
+  if(length(files) > 1){
     
-    dat_list[[i]]$cycle <- dat_list[[i]]$cycle + max(dat_list[[i-1]]$cycle)
+    for(i in 2:length(files)){
+      
+      dat_list[[i]]$cycle <- dat_list[[i]]$cycle + max(dat_list[[i-1]]$cycle)
+      
+    }
+    
     
   }
   
@@ -131,7 +169,7 @@ wrangling <- function(files){
 
 sig_converting <- function(dat){
   
-  PKGMAP <- read.table('your path\\PKGMAP.txt', 
+  PKGMAP <- read.table('C:\\Users\\mano.hong\\Desktop\\AUTOWORK\\PKGMAP.txt', 
                        fill = T,
                        header = T)
   
@@ -210,21 +248,27 @@ tPD_plot <- function(dat){
 NB_plot <- function(dat){
   
   plot_NB <- dat %>%
-    filter(test == max(test)) %>% 
     mutate(NB = factor(NB),
            tPD = round(tPD, 0),
            NB_L = ifelse(NB == 0, 0, 1)) %>% 
     filter(NB_L != 0) %>% 
-    group_by(NB) %>% 
+    group_by(NB, test) %>% 
     tally() %>% 
-    arrange(desc(n)) %>%
-    head(20) %>% 
+    arrange(desc(n)) 
+  
+  NN <- plot_NB %>% 
+    filter(test == 0) %>% 
+    head(20)
+  
+  plot_NB <- plot_NB %>%
+    filter(NB %in% NN$NB) %>% 
     ggplot(aes(x = reorder(NB, -n),
                y = n)) + 
     geom_col() +
     xlab('NG BIN') + 
     coord_flip() +
-    theme_bw()
+    theme_bw() +
+    facet_wrap( ~ test)
   
   ggsave('NB.png', scale = 3)
   
@@ -237,7 +281,7 @@ byRUN_plot <- function(dat){
   byRUN <- dat %>% 
     mutate(tPD = round(tPD, 0),
            NB_L = ifelse(NB == 0, 0, 1)) %>% 
-    filter(x < 150 & y < 150) %>% 
+    filter(x < 150 & y < 150 & tPD > 40 & tPD < 80) %>% 
     group_by(run) %>% 
     summarise(n = n(),
               YLD = (1-mean(NB_L))*100,
@@ -263,7 +307,8 @@ byRUN_plot <- function(dat){
     theme_bw() +
     theme(axis.text.x = element_text(angle = 90, 
                                      hjust = 1),
-          axis.title.x = element_blank())
+          axis.title.x = element_blank()) + 
+    coord_flip()
   
   ggsave('RUNYLD.png', scale = 3)
   
@@ -276,7 +321,9 @@ tPDRUN_plot <- function(dat){
   run_16 <- dat %>% group_by(run) %>% tally %>% arrange(desc(n)) %>% head(16)
   
   WFmap_tPD <- dat %>% 
-    filter(tPD >= 40 & run %in% run_16$run &
+    filter(tPD >= 40 & 
+             tPD <= 90 &
+             run %in% run_16$run &
              x < 150 & y < 150) %>% 
     group_by(x, y, run) %>% 
     summarise(tPD = mean(tPD),
@@ -427,4 +474,156 @@ DUTMAP <- function(dat){
   
   ggsave('TEMPMAP.jpeg', scale = 3)
   
+}
+
+
+IBISMAP <- function(dat, index, unit){
+  
+  dat <- dat %>% 
+    filter(HB == 2) %>% 
+    select(run, wf, x, y, paste0('V', 67:84), paste0('V', 92:109)) %>% 
+    `colnames<-`(c('run', 'wf', 'x', 'y',
+                   paste0('DQ', 0:15, '_1'),
+                   paste0('DM', 0:1, '_1'),
+                   paste0('DQ', 0:15, '_2'),
+                   paste0('DM', 0:1, '_2'))) %>% 
+    melt(id.vars = c('run', 'wf', 'x', 'y')) %>% 
+    mutate(PU_PD = str_split_fixed(variable, '_', 2)[, 2],
+           variable = str_split_fixed(variable, '_', 2)[, 1])
+  
+  if(index == 'all'){
+    
+    
+    
+  }else{
+    
+    dat <- dat %>% filter(variable == index)
+    
+  }
+
+  
+  if(unit == 'run'){
+    
+    WFmap <- dat %>% 
+      filter(x > 0 & y > 0 & x < 150 & y < 150) %>%
+      group_by(x, y, run, variable, PU_PD) %>% 
+      summarise(value = mean(value) %>% abs,
+                .groups = 'drop')
+    
+    xmax <- max(WFmap$x, na.rm = T)
+    xmin <- min(WFmap$x, na.rm = T)
+    ymax <- max(WFmap$y, na.rm = T)
+    ymin <- min(WFmap$y, na.rm = T)
+    
+    ggplot(WFmap,
+           aes(x, y)) +
+      
+      coord_cartesian(xlim = c(xmin, xmax), 
+                      ylim = c(ymin, ymax)) +
+      
+      scale_x_continuous(breaks = seq(xmin, xmax)) +
+      scale_y_continuous(breaks = seq(ymin, ymax))+
+      
+      geom_tile(aes(fill = value),
+                color = 'black')+
+      
+      theme_bw() +
+      theme(
+        panel.background = element_rect(fill = 'white', color = 'white'),
+        panel.grid.major = element_line(color = 'white'),
+        panel.grid.minor = element_line(color = 'white'),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank()
+      ) +
+      
+      facet_wrap(~ paste(run, PU_PD, variable)) +
+      ggtitle('Wafer Map') +
+      scale_fill_gradientn(colours = c('blue', 'skyblue', 'white', 'pink', 'red'))
+    
+  }else if(unit == 'wf'){
+    
+    WFmap <- dat %>% 
+      filter(x > 0 & y > 0 & x < 150 & y < 150) %>%
+      group_by(x, y, run, wf, variable, PU_PD) %>% 
+      summarise(value = mean(value) %>% abs,
+                .groups = 'drop')
+    
+    xmax <- max(WFmap$x, na.rm = T)
+    xmin <- min(WFmap$x, na.rm = T)
+    ymax <- max(WFmap$y, na.rm = T)
+    ymin <- min(WFmap$y, na.rm = T)
+    
+    ggplot(WFmap,
+           aes(x, y)) +
+      
+      coord_cartesian(xlim = c(xmin, xmax), 
+                      ylim = c(ymin, ymax)) +
+      
+      scale_x_continuous(breaks = seq(xmin, xmax)) +
+      scale_y_continuous(breaks = seq(ymin, ymax))+
+      
+      geom_tile(aes(fill = value),
+                color = 'black')+
+      
+      theme_bw() +
+      theme(
+        panel.background = element_rect(fill = 'white', color = 'white'),
+        panel.grid.major = element_line(color = 'white'),
+        panel.grid.minor = element_line(color = 'white'),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank()
+      ) +
+      
+      facet_wrap(~ paste(run, wf, PU_PD, variable)) +
+      ggtitle('Wafer Map') +
+      scale_fill_gradientn(colours = c('blue', 'skyblue', 'white', 'pink', 'red'))
+    
+    
+    
+  }else if(unit == 'all'){
+    
+    WFmap <- dat %>% 
+      filter(x > 0 & y > 0 & x < 150 & y < 150) %>%
+      group_by(x, y, variable, PU_PD) %>% 
+      summarise(value = mean(value) %>% abs,
+                .groups = 'drop')
+    
+    xmax <- max(WFmap$x, na.rm = T)
+    xmin <- min(WFmap$x, na.rm = T)
+    ymax <- max(WFmap$y, na.rm = T)
+    ymin <- min(WFmap$y, na.rm = T)
+    
+    ggplot(WFmap,
+           aes(x, y)) +
+      
+      coord_cartesian(xlim = c(xmin, xmax), 
+                      ylim = c(ymin, ymax)) +
+      
+      scale_x_continuous(breaks = seq(xmin, xmax)) +
+      scale_y_continuous(breaks = seq(ymin, ymax))+
+      
+      geom_tile(aes(fill = value),
+                color = 'black')+
+      
+      theme_bw() +
+      theme(
+        panel.background = element_rect(fill = 'white', color = 'white'),
+        panel.grid.major = element_line(color = 'white'),
+        panel.grid.minor = element_line(color = 'white'),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank()
+      ) +
+      
+      facet_wrap(~ paste(PU_PD, variable)) +
+      ggtitle('Wafer Map') +
+      scale_fill_gradientn(colours = c('blue', 'skyblue', 'white', 'pink', 'red'))
+    
+    
+  }else{
+    
+    stop('### PLEASE INPUT UNIT WITHIN "run" or "wf" or "all"')
+    
+  }
+
+  ggsave('IBIS.png', scale = 3)
 }
