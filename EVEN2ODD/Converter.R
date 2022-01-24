@@ -127,7 +127,7 @@ for(index in 1:length(files)){
         
         repeat{
           
-          bit_judge <- dat[RD[i]+bit] %>% str_detect('DBI[0-1]+')
+          bit_judge <- dat[RD[i]+bit] %>% str_detect('DBI[0-1][0-1][0-1][0-1]')
           
           if(sum(bit_judge, na.rm = T) == 1){
             bit_list <- append(bit_list, bit)
@@ -146,7 +146,7 @@ for(index in 1:length(files)){
                                                RD[i] + bit_list[[3]],
                                                RD[i] + bit_list[[4]])]) %>% 
         mutate(line = 1:4,
-               data = regmatches(code, regexpr('DBI[0-1]+', code)))
+               data = regmatches(code, regexpr('DBI[0-1][0-1][0-1][0-1]', code)))
       
       
       even <- c(1,3,5,7,9,11,13,15)
@@ -180,7 +180,7 @@ for(index in 1:length(files)){
         
         repeat{
           
-          bit_judge <- dat[RD[i]+bit] %>% str_detect('R[0-1]+')
+          bit_judge <- dat[RD[i]+bit] %>% str_detect('R[0-1][0-1][0-1][0-1]')
           
           if(sum(bit_judge, na.rm = T) == 1){
             bit_list <- append(bit_list, bit)
@@ -199,7 +199,7 @@ for(index in 1:length(files)){
                                                RD[i] + bit_list[[3]],
                                                RD[i] + bit_list[[4]])]) %>% 
         mutate(line = 1:4,
-               data = regmatches(code, regexpr('R[0-1]+', code)))
+               data = regmatches(code, regexpr('R[0-1][0-1][0-1][0-1]', code)))
       
       
       even <- c(1,3,5,7,9,11,13,15)
