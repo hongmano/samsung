@@ -50,7 +50,10 @@ for(index in 1:length(files)){
     DM_bool <- str_detect(dat[RD[i]], 'DM\\([0-9a-z,]+\\)')
     
     if(MRR != 'f0' & DM_bool == F){
-      
+
+
+# MRR DATA ----------------------------------------------------------------
+
       bit_list <- list()
       
       for(bit in 1:4){
@@ -112,7 +115,8 @@ for(index in 1:length(files)){
       
     }else if(MRR != 'f0' & DM_bool == T){
       
-      #### DBI
+
+# DBI DATA ----------------------------------------------------------------
       
       bit_list <- list()
       
@@ -165,7 +169,9 @@ for(index in 1:length(files)){
       
       data_DMI <- paste0(bin2hex(first), bin2hex(second))
       
-      #### RD
+
+# RD DATA -----------------------------------------------------------------
+
       
       bit_list <- list()
       
