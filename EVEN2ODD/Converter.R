@@ -112,6 +112,8 @@ for(index in 1:length(files)){
       
     }else if(MRR != 'f0' & DM_bool == T){
       
+      #### DBI
+      
       bit_list <- list()
       
       for(bit in 1:4){
@@ -150,26 +152,20 @@ for(index in 1:length(files)){
       even <- c(1,3,5,7,9,11,13,15)
       odd <- even + 1
       
-      data <- paste0(dat_list[[i]]$data[1],
+      data_DBI <- paste0(dat_list[[i]]$data[1],
                      dat_list[[i]]$data[2],
                      dat_list[[i]]$data[3],
                      dat_list[[i]]$data[4]) %>% 
         str_remove_all('DBI') %>% 
         str_split_fixed('', 16)
+  
       
+      first <- rev(data_DBI[odd][5:8]) %>% as.numeric()
+      second <- rev(data_DBI[odd][1:4]) %>% as.numeric()
       
-      first <- rev(data[odd][5:8]) %>% as.numeric()
-      second <- rev(data[odd][1:4]) %>% as.numeric()
+      data_DMI <- paste0(bin2hex(first), bin2hex(second))
       
-      data <- paste0(bin2hex(first), bin2hex(second))
-      
-      # Change DM Index
-      
-      data_location <- str_locate_all(dat_list[[i]]$code[1], 'DM\\([0-9,a-z]+\\)') %>% unlist %>% min
-      DM_index <- DM %>% filter(DM_data == data) %>% select(DM_index) %>% unlist
-      substr(dat_list[[i]]$code[1], data_location+5, data_location+5) <- DM_index
-      
-      # Change RD DATA
+      #### RD
       
       bit_list <- list()
       
@@ -209,21 +205,28 @@ for(index in 1:length(files)){
       even <- c(1,3,5,7,9,11,13,15)
       odd <- even + 1
       
-      data <- paste0(dat_list[[i]]$data[1],
+      data_RD <- paste0(dat_list[[i]]$data[1],
                      dat_list[[i]]$data[2],
                      dat_list[[i]]$data[3],
                      dat_list[[i]]$data[4]) %>% 
-        str_remove_all('DBI') %>% 
+        str_remove_all('R') %>% 
         str_split_fixed('', 16)
       
+      first <- rev(data_RD[odd][5:8]) %>% as.numeric()
+      second <- rev(data_RD[odd][1:4]) %>% as.numeric()
       
-      first <- rev(data[odd][5:8]) %>% as.numeric()
-      second <- rev(data[odd][1:4]) %>% as.numeric()
+      data_RD <- paste0(bin2hex(first), bin2hex(second))
       
-      data <- paste0(bin2hex(first), bin2hex(second))
+      # Change DM Index
+      
+      data_location <- str_locate_all(dat_list[[i]]$code[1], 'DM\\([0-9,a-z]+\\)') %>% unlist %>% min
+      DM_index <- DM %>% filter(DM_data == data_DMI) %>% select(DM_index) %>% unlist
+      substr(dat_list[[i]]$code[1], data_location+5, data_location+5) <- DM_index
+      
+      # Change RD Data
       
       data_location <- str_locate_all(dat_list[[i]]$code[1], 'RD\\([0-9,a-z]+\\)') %>% unlist %>% min
-      substr(dat_list[[i]]$code[1], data_location+5, data_location+6) <- data
+      substr(dat_list[[i]]$code[1], data_location+5, data_location+6) <- data_RD
       
 
       # Change PATN Code
@@ -254,7 +257,6 @@ for(index in 1:length(files)){
                     '//      -IFE "A O"  ') %>% 
     str_replace_all('PATTERN\\([A-Z0-9]+,memory\\)',
                     paste0('PATTERN\\(', substr(name, 1, nchar(name)-4), ',memory\\)'))
-  
   
   
   setwd('../odd')
