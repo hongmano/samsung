@@ -9,6 +9,8 @@ folders <- list.files()
 
 for(folder in 1:length(folders)){
   
+  
+  setwd('C:/Users/mano.hong/Desktop/마도요/')
   setwd(paste0('./', folders[folder]))
   
   
@@ -298,3 +300,18 @@ for(folder in 1:length(folders)){
   names(result)[folder] <- folders[folder]
   
 }
+
+
+# Summary -----------------------------------------------------------------
+
+
+fin <- rbind(PCJ0239X62$tPD %>% mutate(tPD_corner = 'SS', temp = 'Cold'),
+             PCJ0189V82$tPD %>% mutate(tPD_corner = 'TT', temp = 'Hot'),
+             PCJ0239W82$tPD %>% mutate(tPD_corner = 'FF', temp = 'Hot'),
+             PCJ0189V72$tPD %>% mutate(tPD_corner = 'TT', temp = 'Cold'),
+             PCJ0239W72$tPD %>% mutate(tPD_corner = 'FF', temp = 'Cold'),
+             PCJ0239X72$tPD %>% mutate(tPD_corner = 'SS', temp = 'Hot'))
+
+fin$YLD <- 100 - fin$YLD
+setwd('C:/Users/mano.hong/Desktop')
+write.csv(fin, 'MASS 실장 평가 tPD Corner별 PGK TC 불량률.csv', row.names = F)
