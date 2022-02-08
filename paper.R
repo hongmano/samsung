@@ -59,6 +59,7 @@ filtering <- function(dat){
     NRT <- do.call(paste, c(dat[8:23])) %>%
       str_replace_all('\\s+', ' ') %>% 
       str_replace_all('857 ', ' ') %>% 
+      str_replace_all('4284', ' ') %>% 
       str_replace_all('\\s+', ' ') %>% 
       str_trim()
 
@@ -109,6 +110,10 @@ filtering <- function(dat){
 
 dat_list <- lapply(dat_list, filtering)
 
+### 4001 ~ 4020 All Fail Remove
+
+dat_list$HFC_before$NRT[str_which(dat_list$HFC_before$NRT, '4001')] <- ''
+
 # 4. LDA ------------------------------------------------------------------
 
 
@@ -129,8 +134,8 @@ check_LDA <- function(dat){
     topics = c(2:10),
     metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
     method = "Gibbs",
-    control = list(seed = 1,
-                   iter = 50000),
+    control = list(seed = 1965,
+                   iter = 90000),
     mc.cores = 2,
     verbose = TRUE
     
@@ -154,8 +159,8 @@ fit_LDA <- function(dat, topic){
   
   result <- LDA(dtm,
                 k = topic,
-                control = list(seed = 1,
-                               iter = 50000),
+                control = list(seed = 1965,
+                               iter = 90000),
                 method = 'Gibbs')
   
   post <- posterior(result)
@@ -173,6 +178,7 @@ fit_LDA <- function(dat, topic){
 }
 
 
+
 # 4-2. Fitting -------------------------------------------------------------
 
 
@@ -182,10 +188,7 @@ fit_LDA <- function(dat, topic){
 # result <- fit_LDA(dat_list$HFC_before, 5)
 
 check_LDA(dat_list$HFC_before)
-result <- fit_LDA(dat_list$HFC_after, 3)
-
-SNA(dat_list$HFC_after, cor = 0, topic_n = 3)
-
+result <- fit_LDA(dat_list$HFC_before, 7)
 
 # 4-3. Beta Visualize -----------------------------------------------------
 
@@ -234,17 +237,16 @@ SNA <- function(dat, cor, topic_n){
     filter(topic == topic_n)
   
   cps <- VCorpus(VectorSource(dat$NRT))
-  
+  tdm <- TermDocumentMatrix(cps, control = list(wordLengths = c(2, 10)))
+  dtm <- as.DocumentTermMatrix(tdm)
+
   dtmTfIdf <- DocumentTermMatrix(x = cps,
                                  control = list(wordLengths = c(2, Inf),
                                                 weighting = function(x) weightTfIdf(x, normalize = T)))
-  
+
   dtmTfIdf <- removeSparseTerms(x =  dtmTfIdf,
                                 sparse = as.numeric(x = 0.95))
-  
-  
-  dtmTfIdf$dimnames$Terms <- toupper(dtmTfIdf$dimnames$Terms)
-  
+
   corTerms <- dtmTfIdf %>% as.matrix() %>% cor()
   corTerms[corTerms <= cor] <- 0
   
@@ -265,8 +267,7 @@ SNA <- function(dat, cor, topic_n){
          layout.par = list(cell.jitter = 0.001),
          label = TRUE, 
          size = degree(dat = netTerms),
-         size.min = 2,
-         size.zero = F,
+         size.min = 1,
          label.size = 5) +
     labs(title = paste0('TOPIC = ', topic_n)) +
     theme_bw() +
@@ -274,4 +275,7 @@ SNA <- function(dat, cor, topic_n){
     
 }
 
+# 5-2. Fitting ------------------------------------------------------------
+
+SNA(dat_list$HFC_before, cor = 0, topic_n = 3)
 
