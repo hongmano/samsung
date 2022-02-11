@@ -23,7 +23,7 @@ library(sna)
 
 # 2. Data Loading ---------------------------------------------------------
 
-setwd('C:/Users/mano.hong/Desktop/논문/22.02 LDA SNA(가제)')
+setwd('C:/Users/mano.hong/Desktop/³í¹®/22.02 LDA SNA(°¡Á¦)')
 
 dat <- read.csv('fin.csv')
 
@@ -49,7 +49,7 @@ dat_list <- list(HFC_before = dat %>% filter(step == 'T090PR0' & D_amp == '1st')
 
 
 filtering <- function(dat){
-  
+
   if(substr(dat$step[1], 1, 4) == 'T090'){
     
     dat <- dat %>% 
@@ -72,6 +72,7 @@ filtering <- function(dat){
       }
     
     dat$NRT <- NRT
+    dat$NRT_n <- str_count(dat$NRT, ' ')
     
     dat <- dat %>% 
       select(-c(paste0('V', 186:201)))
@@ -98,6 +99,7 @@ filtering <- function(dat){
     }
     
     dat$NRT <- NRT
+    dat$NRT_n <- str_count(dat$NRT, ' ')
     
     dat <- dat %>% 
       select(-c(paste0('V', 201:210)))
@@ -110,6 +112,8 @@ filtering <- function(dat){
 
 dat_list <- lapply(dat_list, filtering)
 
+
+dat_list$HFC_before$NRT_n
 ### 4001 ~ 4020 All Fail Remove
 
 dat_list$HFC_before$NRT[str_which(dat_list$HFC_before$NRT, '4001')] <- ''
@@ -135,7 +139,7 @@ check_LDA <- function(dat){
     metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
     method = "Gibbs",
     control = list(seed = 1965,
-                   iter = 90000),
+                   iter = 100000),
     mc.cores = 2,
     verbose = TRUE
     
@@ -160,7 +164,7 @@ fit_LDA <- function(dat, topic){
   result <- LDA(dtm,
                 k = topic,
                 control = list(seed = 1965,
-                               iter = 90000),
+                               iter = 100000),
                 method = 'Gibbs')
   
   post <- posterior(result)
@@ -187,8 +191,9 @@ fit_LDA <- function(dat, topic){
 
 # result <- fit_LDA(dat_list$HFC_before, 5)
 
+dat_list$HFC_before$NRT
 check_LDA(dat_list$HFC_before)
-result <- fit_LDA(dat_list$HFC_before, 7)
+result <- fit_LDA(dat_list$HFC_before, 4)
 
 # 4-3. Beta Visualize -----------------------------------------------------
 
