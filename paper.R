@@ -23,16 +23,18 @@ library(sna)
 
 # 2. Data Loading ---------------------------------------------------------
 
-setwd('C:/Users/mano.hong/Desktop/³í¹®/22.02 LDA SNA(°¡Á¦)')
+setwd('C:/Users/mano.hong/Desktop/논문/22.02 LDA SNA(가제)')
 
 dat <- read.csv('fin.csv')
+item <- read.csv('item.csv') %>% 
+  mutate(Item = str_remove_all(Item, '\\s+'))
 
 # 3. Wrangling ------------------------------------------------------------
 
 # 3-1. Filter Only Fail Chip ----------------------------------------------
 
 dat <- dat %>% 
-  filter(HB == 6) %>% 
+  filter(HB == 6 & test == 0) %>% 
   mutate(D_amp = ifelse(lot %in% c('PCH0079X52', 'PCH0079X62'), '1st', '2nd'))
 
 
@@ -60,6 +62,7 @@ filtering <- function(dat){
       str_replace_all('\\s+', ' ') %>% 
       str_replace_all('857 ', ' ') %>% 
       str_replace_all('4284', ' ') %>% 
+      str_replace_all('4170', '') %>% 
       str_replace_all('\\s+', ' ') %>% 
       str_trim()
 
@@ -86,6 +89,7 @@ filtering <- function(dat){
     NRT <- do.call(paste, c(dat[8:17])) %>%
       str_replace_all('\\s+', ' ') %>% 
       str_replace_all('857 ', ' ') %>% 
+      str_replace_all('4170', '') %>% 
       str_replace_all('\\s+', ' ') %>% 
       str_trim()
     
@@ -112,12 +116,6 @@ filtering <- function(dat){
 
 dat_list <- lapply(dat_list, filtering)
 
-
-dat_list$HFC_before$NRT_n
-### 4001 ~ 4020 All Fail Remove
-
-dat_list$HFC_before$NRT[str_which(dat_list$HFC_before$NRT, '4001')] <- ''
-
 # 4. LDA ------------------------------------------------------------------
 
 
@@ -126,7 +124,7 @@ dat_list$HFC_before$NRT[str_which(dat_list$HFC_before$NRT, '4001')] <- ''
 check_LDA <- function(dat){
   
   dat <- dat %>% 
-    filter(NRT != '' & test == 0)
+    filter(NRT != '')
   
   cps <- VCorpus(VectorSource(dat$NRT))
   tdm <- TermDocumentMatrix(cps, control = list(wordLengths = c(2, 10)))
@@ -138,8 +136,8 @@ check_LDA <- function(dat){
     topics = c(2:10),
     metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
     method = "Gibbs",
-    control = list(seed = 1965,
-                   iter = 100000),
+    control = list(seed = 1,
+                   iter = 200),
     mc.cores = 2,
     verbose = TRUE
     
@@ -155,7 +153,7 @@ check_LDA <- function(dat){
 fit_LDA <- function(dat, topic){
   
   dat <- dat %>% 
-    filter(NRT != '' & test == 0)
+    filter(NRT != '')
   
   cps <- VCorpus(VectorSource(dat$NRT))
   tdm <- TermDocumentMatrix(cps, control = list(wordLengths = c(2, 10)))
@@ -163,8 +161,8 @@ fit_LDA <- function(dat, topic){
   
   result <- LDA(dtm,
                 k = topic,
-                control = list(seed = 1965,
-                               iter = 100000),
+                control = list(seed = 1,
+                               iter = 200),
                 method = 'Gibbs')
   
   post <- posterior(result)
@@ -185,15 +183,10 @@ fit_LDA <- function(dat, topic){
 
 # 4-2. Fitting -------------------------------------------------------------
 
+#check_LDA(dat_list$HFC_before)
+check_LDA(dat_list$HFC_after)
 
-# check_LDA(dat_list$HFC_before)
-# check_LDA(dat_list$HFC_after)
-
-# result <- fit_LDA(dat_list$HFC_before, 5)
-
-dat_list$HFC_before$NRT
-check_LDA(dat_list$HFC_before)
-result <- fit_LDA(dat_list$HFC_before, 4)
+result <- fit_LDA(dat_list$HFC_before, 7)
 
 # 4-3. Beta Visualize -----------------------------------------------------
 
@@ -214,8 +207,9 @@ Beta_visualize <- function(result, n_words){
                  y = beta)) +
       geom_bar(stat = 'identity') +
       coord_flip() +
-      labs(x = 'Beta',
-           y = '') +
+      labs(x = '',
+           y = '',
+           title = paste0('Topic = ', i)) +
       theme_bw()
     
     
@@ -225,46 +219,113 @@ Beta_visualize <- function(result, n_words){
   
 }
 
-Beta_visualize(result, 10)
+Beta_visualize(result, 30)
+
+
+# 4-4. Gamma Visualize ----------------------------------------------------
+
+Gamma_visualize <- function(result, n_docs){
+  
+  gamma <- tidy(result, matrix = "gamma") %>% 
+    group_by(topic) %>% 
+    top_n(n_docs) %>% 
+    arrange(topic, desc(gamma))
+  
+  gamma_list <- split(gamma, gamma$topic)
+  p <- list()
+  
+  for(i in 1:length(gamma_list)){
+    
+    p[[i]] <- gamma_list[[i]] %>% 
+      ggplot(aes(x = reorder(document, gamma),
+                 y = gamma)) +
+      geom_bar(stat = 'identity') +
+      coord_flip() +
+      labs(x = '',
+           y = '',
+           title = paste('Topic = ', i)) +
+      theme_bw()
+    
+    
+  }
+  
+  p <- do.call('grid.arrange', c(p, ncol = length(gamma_list)))
+  
+}
+
+Gamma_visualize(result, 10)
 
 # 5. Network Analysis -----------------------------------------------------
 
 # 5-1. SNA ----------------------------------------------------------------
 
-SNA <- function(dat, cor, topic_n){
+SNA <- function(dat, cor, size.min = 30, topic_n){
+
+  if(topic_n %in% c(3, 4)){
+    
+    gamma <- tidy(result, matrix = "gamma") %>% 
+      group_by(topic) %>% 
+      top_n(50) %>% 
+      arrange(topic, desc(gamma)) %>% 
+      filter(topic == topic_n)
+    
+  }else{
+    
+    gamma <- tidy(result, matrix = "gamma") %>% 
+      group_by(topic) %>% 
+      top_n(25) %>% 
+      arrange(topic, desc(gamma)) %>% 
+      filter(topic == topic_n)
+    
+  }
   
   dat <- dat %>% 
     filter(NRT != '' & test == 0)
   
   dat$topic <- apply(result@gamma, 1, which.max)
+  dat <- dat[gamma$document, ]
   
   dat <- dat %>% 
     filter(topic == topic_n)
   
+  ### NRT Wrangling by Topic
+  
+  if(topic_n == 2){
+    
+    dat$NRT <- dat$NRT %>% 
+      str_remove_all('3241|3238|3254|3248|3239|3255|3214|3250|3247|3242')
+    
+  }
+  
+  
   cps <- VCorpus(VectorSource(dat$NRT))
   tdm <- TermDocumentMatrix(cps, control = list(wordLengths = c(2, 10)))
   dtm <- as.DocumentTermMatrix(tdm)
+  
+# 
+#   dtmTfIdf <- DocumentTermMatrix(x = cps,
+#                                  control = list(wordLengths = c(2, Inf),
+#                                                 weighting = function(x) weightTfIdf(x, normalize = T)))
+# 
+#   dtmTfIdf <- removeSparseTerms(x =  dtmTfIdf,
+#                                 sparse = as.numeric(x = 0.99))
 
-  dtmTfIdf <- DocumentTermMatrix(x = cps,
-                                 control = list(wordLengths = c(2, Inf),
-                                                weighting = function(x) weightTfIdf(x, normalize = T)))
-
-  dtmTfIdf <- removeSparseTerms(x =  dtmTfIdf,
-                                sparse = as.numeric(x = 0.95))
-
-  corTerms <- dtmTfIdf %>% as.matrix() %>% cor()
+  corTerms <- dtm %>% as.matrix() %>% cor()
   corTerms[corTerms <= cor] <- 0
   
   netTerms <- network(x = corTerms, directed = F)
   btnTerms <- betweenness(netTerms)
   
   netTerms %v% 'mode' <-
-    ifelse(test = btnTerms >= quantile(x = btnTerms, probs = 0.9, na.rm = T), 'Top10%', 'Other')
+    ifelse(test = btnTerms >= quantile(x = btnTerms, probs = 0.95, na.rm = T), 'Top5%', 
+           ifelse(test = btnTerms >= quantile(x = btnTerms, probs = 0.85, na.rm = T), 'Top15%', 'Other'))
   
-  nodeColors <- c('Top10%' = 'yellow',
+  nodeColors <- c('Top5%' = 'orange',
+                  'Top15%' = 'yellow',
                   'Other' = 'white')
   
-  set.edge.value(netTerms, attrname = 'edgeSize', value = corTerms * 3)
+  set.edge.value(netTerms, attrname = 'edgeSize', value = corTerms)
+
 
   ggnet2(netTerms, 
          node.color = 'mode',
@@ -272,15 +333,23 @@ SNA <- function(dat, cor, topic_n){
          layout.par = list(cell.jitter = 0.001),
          label = TRUE, 
          size = degree(dat = netTerms),
-         size.min = 1,
+         size.min = size.min,
          label.size = 5) +
     labs(title = paste0('TOPIC = ', topic_n)) +
     theme_bw() +
     theme(legend.position = 'none')
-    
+
 }
 
 # 5-2. Fitting ------------------------------------------------------------
 
-SNA(dat_list$HFC_before, cor = 0, topic_n = 3)
+
+SNA(dat_list$HFC_before, cor = 0, size.min = 1, topic_n = 1)
+SNA(dat_list$HFC_before, cor = 0, size.min = 1, topic_n = 2)
+SNA(dat_list$HFC_before, cor = 0, size.min = 1, topic_n = 3)
+SNA(dat_list$HFC_before, cor = 0, size.min = 1, topic_n = 4)
+SNA(dat_list$HFC_before, cor = 0, size.min = 1, topic_n = 5)
+SNA(dat_list$HFC_before, cor = 0, size.min = 1, topic_n = 6)
+SNA(dat_list$HFC_before, cor = 0, size.min = 1, topic_n = 7)
+
 
