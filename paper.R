@@ -31,10 +31,10 @@ item <- read.csv('item.csv') %>%
 
 # 3. Wrangling ------------------------------------------------------------
 
-# 3-1. Filter Only Fail Chip ----------------------------------------------
+# 3-1. Filter Only Fail Chip and Final Test ----------------------------------------------
 
 dat <- dat %>% 
-  filter(HB == 6 & test == 0) %>% 
+  filter(HB == 6 & test == 2) %>% 
   mutate(D_amp = ifelse(lot %in% c('PCH0079X52', 'PCH0079X62'), '1st', '2nd'))
 
 
@@ -60,10 +60,6 @@ filtering <- function(dat){
     
     NRT <- do.call(paste, c(dat[8:23])) %>%
       str_replace_all('\\s+', ' ') %>% 
-      str_replace_all('857 ', ' ') %>% 
-      str_replace_all('4284', ' ') %>% 
-      str_replace_all('4170', '') %>% 
-      str_replace_all('\\s+', ' ') %>% 
       str_trim()
 
 # 3-4. Remove Duplicated TN by HSDO ---------------------------------------
@@ -87,9 +83,6 @@ filtering <- function(dat){
     dat[8:17][dat[8:17] == 0] <- ''
     
     NRT <- do.call(paste, c(dat[8:17])) %>%
-      str_replace_all('\\s+', ' ') %>% 
-      str_replace_all('857 ', ' ') %>% 
-      str_replace_all('4170', '') %>% 
       str_replace_all('\\s+', ' ') %>% 
       str_trim()
     
@@ -115,6 +108,9 @@ filtering <- function(dat){
 }
 
 dat_list <- lapply(dat_list, filtering)
+
+
+dat_list$HFC_before$NRT[str_detect(dat_list$HFC_before$NRT, '2301')] <- ''
 
 # 4. LDA ------------------------------------------------------------------
 
@@ -180,13 +176,11 @@ fit_LDA <- function(dat, topic){
 }
 
 
-
 # 4-2. Fitting -------------------------------------------------------------
 
-#check_LDA(dat_list$HFC_before)
-check_LDA(dat_list$HFC_after)
+check_LDA(dat_list$HFC_before)
 
-result <- fit_LDA(dat_list$HFC_before, 7)
+result <- fit_LDA(dat_list$HFC_before, 5)
 
 # 4-3. Beta Visualize -----------------------------------------------------
 
@@ -219,7 +213,7 @@ Beta_visualize <- function(result, n_words){
   
 }
 
-Beta_visualize(result, 30)
+Beta_visualize(result, 15)
 
 
 # 4-4. Gamma Visualize ----------------------------------------------------
