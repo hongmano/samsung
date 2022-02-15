@@ -112,6 +112,7 @@ dat_list <- lapply(dat_list, filtering)
 dat_list$HFC_before$NRT[str_count(dat_list$HFC_before$NRT, ' ') == 0] <- ''
 dat_list$HFC_before$NRT[str_detect(dat_list$HFC_before$NRT, '4001')] <- ''
 dat_list$HFC_before$NRT[str_detect(dat_list$HFC_before$NRT, '2301')] <- ''
+
 dat_list$HFC_before$NRT[dat_list$HFC_before$NRT_n == 0] <- ''
 
 # 4. LDA ------------------------------------------------------------------
@@ -296,8 +297,10 @@ SNA <- function(dat, cor, size.min = 30, topic_n){
   }else if(topic_n == 7){
     
     dat$NRT <- dat$NRT %>% 
-      str_remove_all('3229|3243|3213|3326|272 ') %>% 
+      str_remove_all('3229|3243|3213|3326|272 |304 ') %>% 
       str_replace_all('\\s+', ' ')
+    
+    dat$NRT[str_detect(dat$NRT, '3001')] <- ''
     
   }else if(topic_n == 8){
     
