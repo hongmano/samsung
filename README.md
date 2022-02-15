@@ -1,5 +1,11 @@
 # samsung
 
+## Paper
+
+Statistical Failure Analysis via Natural Language Processing (Hong Man Ho, 2021)
+
+## Code
+
 AUTOWORK
   - test.py : PKGMAP Download from ftp Server (Test Technology Team @KCY)
   - autowork_utils.R : Set PKGMAP to csv file & Visualize (source code)
