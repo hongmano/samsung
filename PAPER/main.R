@@ -25,7 +25,7 @@ library(sna)
 
 setwd('C:/Users/mano.hong/Desktop/논문/22.02 LDA SNA(가제)')
 
-dat <- read.csv('fin.csv')
+dat <- read.csv('fin2.csv')
 item <- read.csv('item.csv') %>% 
   mutate(Item = str_remove_all(Item, '\\s+'))
 
@@ -36,6 +36,7 @@ item <- read.csv('item.csv') %>%
 dat <- dat %>% 
   filter(HB == 6 & test == 0) %>% 
   mutate(D_amp = ifelse(lot %in% c('PCH0079X52', 'PCH0079X62'), '1st', '2nd'))
+
 
 
 # 3-2. Split PKGMAP to list -----------------------------------------------
@@ -295,7 +296,7 @@ SNA <- function(dat, cor, size.min = 30, topic_n){
   }else if(topic_n == 7){
     
     dat$NRT <- dat$NRT %>% 
-      str_remove_all('3229|3243|3213|3326') %>% 
+      str_remove_all('3229|3243|3213|3326|272 ') %>% 
       str_replace_all('\\s+', ' ')
     
   }else if(topic_n == 8){
