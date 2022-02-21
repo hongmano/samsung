@@ -1,6 +1,7 @@
-dat <- read.csv('C:/Users/Mano/Desktop/z.csv')
 
 SRS <- function(dat, NRT, DP){
+  
+  dat <- dat %>% filter(HB != 8)
   
   NRT1 <- dat[, NRT]
   
@@ -27,7 +28,9 @@ runRS <- function(dat, NRT, DP){
   runRS <- split(dat, dat$run)
   
   for(run in 1:length(runRS)){
-
+    
+    runRS[[run]] <- runRS[[run]] %>% filter(HB != 8)
+    
     NRT1 <- runRS[[run]][, NRT]
     pkg <- sample(1:nrow(runRS[[run]])) %/% DP
     
@@ -42,7 +45,7 @@ runRS <- function(dat, NRT, DP){
       
       ungroup() %>% 
       unique()
-
+    
   }
   
   runRS <- rbindlist(runRS)
@@ -58,6 +61,7 @@ wfRS <- function(dat, NRT, DP){
   
   for(wf in 1:length(wfRS)){
     
+    wfRS[[wf]] <- wfRS[[wf]] %>% filter(HB != 8)
     NRT1 <- wfRS[[wf]][, NRT]
     pkg <- sample(1:nrow(wfRS[[wf]])) %/% DP
     
@@ -82,14 +86,20 @@ wfRS <- function(dat, NRT, DP){
   
 }
 
-simulation <- function(dat, NRT, DP){
-
+simulation <- function(dat, NRT, iter, DP){
+  
+  dat <- dat %>% filter(HB != 8)
+  
+  prime <- dat %>% filter(test == 0 & HB == 2)
+  retest <- dat %>% filter(test == 1)
+  dat <- rbind(prime, retest)
+  
   NRT1 <- dat[, NRT]
   SRS_YLD <- list()
   runRS_YLD <- list()
   wfRS_YLD <- list()
   
-  for(i in 1:10){
+  for(i in 1:iter){
     
     set.seed(i)
     
@@ -98,18 +108,53 @@ simulation <- function(dat, NRT, DP){
     wfRS_YLD[[i]] <- wfRS(dat, NRT, DP)
     
   }
-
+  
   SRS_YLD <- SRS_YLD %>% unlist
   runRS_YLD <- runRS_YLD %>% unlist
   wfRS_YLD <- wfRS_YLD %>% unlist
   
-  fin <- list(SRS = SRS_YLD,
-              runRS = runRS_YLD,
-              wfRS = wfRS_YLD)
+  SRS_mean <- SRS_YLD %>% mean
+  runRS_mean <- runRS_YLD %>% mean
+  wfRS_mean <- wfRS_YLD %>% mean
+  
+  SRS_std <- SRS_YLD %>% var %>% sqrt / sqrt(iter) * 1.96
+  runRS_std <- runRS_YLD %>% var %>% sqrt / sqrt(iter) * 1.96
+  wfRS_std <- wfRS_YLD %>% var %>% sqrt / sqrt(iter) * 1.96
+  
+  fin <- data.frame(type = c('SRS', 'runRS', 'wfRS'),
+                    lower = c(round(SRS_mean - SRS_std, 2),
+                              round(runRS_mean - runRS_std, 2),
+                              round(wfRS_mean - wfRS_std, 2)),
+                    upper = c(round(SRS_mean + SRS_std, 2),
+                              round(runRS_mean + runRS_std, 2),
+                              round(wfRS_mean + wfRS_std, 2)),
+                    n_pkg = nrow(dat) / DP)
   
   return(fin)  
   
 }
 
-result <- simulation(dat, 14, 4)
-result
+
+# -------------------------------------------------------------------------
+
+setwd('C:/Users/mano.hong/Desktop/RProject(WH)/22. 02. WH PRA 물량 조립안 별 Simulation')
+folders <- list.files()
+result <- list()
+
+for(folder in 1:length(folders)){
+  
+  setwd('C:/Users/mano.hong/Desktop/RProject(WH)/22. 02. WH PRA 물량 조립안 별 Simulation')
+  setwd(paste0('./', folders[folder]))
+  
+  step <- str_split_fixed(folders[folder], '_', 3)[1]
+  info <- substr(folders[folder], 6, 100)
+  
+  dat <- read.csv('fin.csv')
+  result[[folder]] <- simulation(dat = dat, NRT = 5, iter = 10000, DP = 4) %>% 
+    mutate(step = step,
+           info = info)
+  
+  print(info)
+  
+  
+}
