@@ -25,6 +25,7 @@ SRS <- function(dat, NRT, DP){
 
 runRS <- function(dat, NRT, DP){
   
+  dat <- dat %>% filter(HB != 8)
   runRS <- split(dat, dat$run)
   
   for(run in 1:length(runRS)){
@@ -57,6 +58,8 @@ runRS <- function(dat, NRT, DP){
 
 wfRS <- function(dat, NRT, DP){
   
+  
+  dat <- dat %>% filter(HB != 8)
   wfRS <- split(dat, dat$wf)
   
   for(wf in 1:length(wfRS)){
@@ -150,11 +153,10 @@ for(folder in 1:length(folders)){
   info <- substr(folders[folder], 6, 100)
   
   dat <- read.csv('fin.csv')
-  result[[folder]] <- simulation(dat = dat, NRT = 5, iter = 10000, DP = 4) %>% 
+  result[[folder]] <- simulation(dat = dat, NRT = 5, iter = 100, DP = 4) %>% 
     mutate(step = step,
            info = info)
   
   print(info)
-  
   
 }
