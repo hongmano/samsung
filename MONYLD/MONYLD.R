@@ -2,13 +2,13 @@ library(stringr)
 library(dplyr)
 library(data.table)
 
-setwd('C:/Users/mano.hong/Desktop/마도요/m805A_PCJ0239W82_K3KL3L30CM-BGCT000-PPB9AH_T091PRA_220204222652')
+setwd('C:/Users/mano.hong/Desktop/m805A_PCJ0239W82_K3KL3L30CM-BGCT000-PPB9AH_T091PRA_220204222652')
 
 files <- list.files()
-files <- files[str_detect(files, '.txt')]
+files <- files[str_detect(files, '[0-9].txt')]
 
 log_summary <- function(file, DP, result){
-  
+file <- files[9]
   dat <- readLines(file)
   
   # Start Point of Cycle
@@ -42,6 +42,9 @@ log_summary <- function(file, DP, result){
     tally %>% 
     filter(n > 1000) %>% 
     select(cycle)
+  
+  if(nrow(real) == 0) return()
+  
   
   dat <- dat %>% 
     filter(REGFLG == '0' & cycle %in% real$cycle)
@@ -78,7 +81,8 @@ log_summary <- function(file, DP, result){
     
     plate <- data.frame(DU = rep(1:4, each = 4),
                         DO = rep(1:4, 4)) %>% 
-      left_join(PKGMAP) %>% 
+      left_join(PKGMAP,
+                by = c('DU', 'DO')) %>% 
       mutate(tPD = round(as.numeric(tPD), 0),
              variable = paste0('CH', 1:16))
     
@@ -120,12 +124,14 @@ log_summary <- function(file, DP, result){
     other <- even %>% filter(!PATN %in% odd$PATN)
     even <- even %>% filter(!PATN %in% other$PATN)
     
-    HSDO <- even %>% select(TN, HB, VDD2H, VDD2L, tCK, PATN, DOE, DUT, CH) %>% 
+    HSDO <- even %>% 
+      select(TN, HB, VDD2H, VDD2L, tCK, PATN, DOE, DUT, CH) %>% 
       rename(DUT_even = DUT,
              CH_even = CH) %>% 
       inner_join(odd %>% select(TN, HB, VDD2H, VDD2L, tCK, PATN, DOE, DUT, CH) %>% 
                    rename(DUT_odd = DUT,
-                          CH_odd = CH))
+                          CH_odd = CH),
+                 by = c("TN", "HB", "VDD2H", "VDD2L", "tCK", "PATN", "DOE"))
     
     other <- other %>% select(TN, HB, VDD2H, VDD2L, tCK, PATN, DOE, DUT, CH)
     
@@ -164,7 +170,8 @@ log_summary <- function(file, DP, result){
       melt(id.vars = c('TN', 'HB', 'VDD2H', 'VDD2L', 'tCK', 'PATN', 'DOE')) %>% 
       mutate(value = ifelse(value == 'P', 1,
                             ifelse(value == '*', 0, NA))) %>% 
-      inner_join(plate)
+      inner_join(plate,
+                 by = "variable")
     
     # DUTYLD
     
@@ -175,12 +182,14 @@ log_summary <- function(file, DP, result){
       nrow
     
     DUTYLD[[i]] <- fin %>% 
-      group_by(TN, DU) %>% 
-      summarise(value = sum(value)) %>% 
+      group_by(TN, DOE, DU) %>% 
+      summarise(value = sum(value),
+                .groups = 'drop') %>% 
       mutate(value = ifelse(value == DP, 1, 0)) %>% 
       na.omit %>% 
-      group_by(TN) %>% 
-      summarise(value = sum(value)) %>% 
+      group_by(TN, DOE) %>% 
+      summarise(value = sum(value),
+                .groups = 'drop') %>% 
       mutate(DUT_NUM)
     
     
@@ -193,11 +202,13 @@ log_summary <- function(file, DP, result){
       nrow
     
     CHYLD[[i]] <- fin %>% 
-      group_by(TN, variable) %>% 
-      summarise(value = sum(value)) %>% 
+      group_by(TN, DOE, variable) %>% 
+      summarise(value = sum(value),
+                .groups = 'drop') %>% 
       na.omit %>% 
-      group_by(TN) %>% 
-      summarise(value = sum(value)) %>% 
+      group_by(TN, DOE) %>% 
+      summarise(value = sum(value),
+                .groups = 'drop') %>% 
       mutate(CH_NUM)
     
     # tPD YLD
@@ -210,29 +221,37 @@ log_summary <- function(file, DP, result){
       tally
     
     tPDYLD[[i]] <- fin %>% 
-      group_by(TN, tPD) %>% 
-      summarise(value = sum(value)) %>% 
+      group_by(TN, DOE, tPD) %>% 
+      summarise(value = sum(value),
+                .groups = 'drop') %>% 
       na.omit %>% 
-      inner_join(tPD_NUM) %>% 
+      inner_join(tPD_NUM,
+                 by = "tPD") %>% 
       rename(tPD_NUM = n)
     
     
   }
   
   DUTYLD <- rbindlist(DUTYLD) %>% 
-    group_by(TN) %>% 
+    group_by(TN, DOE) %>% 
     summarise(value = sum(value),
-              DUT_NUM = sum(DUT_NUM))
+              DUT_NUM = sum(DUT_NUM),
+              .groups = 'drop')
   
   CHYLD <- rbindlist(CHYLD) %>% 
-    group_by(TN) %>% 
+    group_by(TN, DOE) %>% 
     summarise(value = sum(value),
-              CH_NUM = sum(CH_NUM))
+              CH_NUM = sum(CH_NUM),
+              .groups = 'drop')
   
   tPDYLD <- rbindlist(tPDYLD) %>% 
-    group_by(TN, tPD) %>% 
+    group_by(TN, DOE, tPD) %>% 
     summarise(value = sum(value),
-              tPD_NUM = sum(tPD_NUM))
+              tPD_NUM = sum(tPD_NUM),
+              .groups = 'drop')
+  
+  msg <- paste0('Log File Done.....')
+  print(msg)
   
   if(result == 'DUT'){
     return(DUTYLD)
