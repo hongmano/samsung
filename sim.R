@@ -1,23 +1,18 @@
 
 SRS <- function(dat, NRT, DP){
   
-  dat <- dat %>% filter(HB != 8)
-  
-  NRT1 <- dat[, NRT]
-  
   SRS <- dat %>% 
     filter(HB != 8) %>% 
-    select(run, wf, x, y) %>% 
-    mutate(NRT_L = ifelse(NRT1 == 0, 0, 1),
+    mutate(NB = ifelse(HB %in% 5:8 & NB != 0, 1, 0),
            pkg = sample(1:nrow(dat)) %/% DP) %>% 
     group_by(pkg) %>% 
-    summarise(NRT_L = max(NRT_L),
+    summarise(NB = max(NB),
               .groups = 'drop') %>% 
     
     ungroup() %>% 
     unique()
   
-  SRS <- round((1 - sum(SRS$NRT_L) / nrow(SRS)) * 100, 2)
+  SRS <- round((1 - sum(SRS$NB) / nrow(SRS)) * 100, 2)
   
   return(SRS)
   
@@ -25,23 +20,17 @@ SRS <- function(dat, NRT, DP){
 
 runRS <- function(dat, NRT, DP){
   
-  dat <- dat %>% filter(HB != 8)
   runRS <- split(dat, dat$run)
   
   for(run in 1:length(runRS)){
     
-    runRS[[run]] <- runRS[[run]] %>% filter(HB != 8)
-    
-    NRT1 <- runRS[[run]][, NRT]
     pkg <- sample(1:nrow(runRS[[run]])) %/% DP
     
-    runRS[[run]] <- runRS[[run]] %>% 
-      filter(HB != 8) %>% 
-      select(run, wf, x, y) %>% 
-      mutate(NRT_L = ifelse(NRT1 == 0, 0, 1),
+    runRS[[run]] <- runRS[[run]] %>%
+      mutate(NB = ifelse(HB %in% 5:8 & NB != 0, 1, 0),
              pkg = pkg) %>% 
       group_by(pkg) %>% 
-      summarise(NRT_L = max(NRT_L),
+      summarise(NB = max(NB),
                 .groups = 'drop') %>% 
       
       ungroup() %>% 
@@ -50,7 +39,7 @@ runRS <- function(dat, NRT, DP){
   }
   
   runRS <- rbindlist(runRS)
-  runRS <- round((1 - sum(runRS$NRT_L) / nrow(runRS)) * 100, 2)
+  runRS <- round((1 - sum(runRS$NB) / nrow(runRS)) * 100, 2)
   
   return(runRS)
   
@@ -58,23 +47,18 @@ runRS <- function(dat, NRT, DP){
 
 wfRS <- function(dat, NRT, DP){
   
-  
-  dat <- dat %>% filter(HB != 8)
-  wfRS <- split(dat, dat$wf)
+  wfRS <- split(dat, paste0(dat$run, '_', dat$wf))
   
   for(wf in 1:length(wfRS)){
     
-    wfRS[[wf]] <- wfRS[[wf]] %>% filter(HB != 8)
-    NRT1 <- wfRS[[wf]][, NRT]
     pkg <- sample(1:nrow(wfRS[[wf]])) %/% DP
     
     wfRS[[wf]] <- wfRS[[wf]] %>% 
       filter(HB != 8) %>% 
-      select(run, wf, x, y) %>% 
-      mutate(NRT_L = ifelse(NRT1 == 0, 0, 1),
+      mutate(NB = ifelse(HB %in% 5:8 & NB != 0, 1, 0),
              pkg = pkg) %>% 
       group_by(pkg) %>% 
-      summarise(NRT_L = max(NRT_L),
+      summarise(NB = max(NB),
                 .groups = 'drop') %>% 
       
       ungroup() %>% 
@@ -83,7 +67,7 @@ wfRS <- function(dat, NRT, DP){
   }
   
   wfRS <- rbindlist(wfRS)
-  wfRS <- round((1 - sum(wfRS$NRT_L) / nrow(wfRS)) * 100, 2)
+  wfRS <- round((1 - sum(wfRS$NB) / nrow(wfRS)) * 100, 2)
   
   return(wfRS)
   
@@ -93,11 +77,27 @@ simulation <- function(dat, NRT, iter, DP){
   
   dat <- dat %>% filter(HB != 8)
   
-  prime <- dat %>% filter(test == 0 & HB == 2)
-  retest <- dat %>% filter(test == 1)
-  dat <- rbind(prime, retest)
+  if(max(dat$test) == 1){
+    
+    prime <- dat %>% filter(test == 0 & HB %in% 1:4)
+    retest <- dat %>% filter(test == 1)
+    dat <- rbind(prime, retest)
+    
+    }else if(max(dat$test) == 2){
+      
+      prime <- dat %>% filter(test == 0 & HB %in% 1:4)
+      retest <- dat %>% filter(test == 1 & HB %in% 1:4)
+      retest2 <- dat %>% filter(test == 2)
+      dat <- rbind(prime, retest, retest2)
+      
+    }else{
+      
+      stop('What The Fuck with max(test) ????')
+      
+    }
   
-  NRT1 <- dat[, NRT]
+  
+
   SRS_YLD <- list()
   runRS_YLD <- list()
   wfRS_YLD <- list()
@@ -105,9 +105,12 @@ simulation <- function(dat, NRT, iter, DP){
   for(i in 1:iter){
     
     set.seed(i)
-    
     SRS_YLD[[i]] <- SRS(dat, NRT, DP)
+    
+    set.seed(i)
     runRS_YLD[[i]] <- runRS(dat, NRT, DP)
+    
+    set.seed(i)
     wfRS_YLD[[i]] <- wfRS(dat, NRT, DP)
     
   }
@@ -140,23 +143,25 @@ simulation <- function(dat, NRT, iter, DP){
 
 # -------------------------------------------------------------------------
 
-setwd('C:/Users/mano.hong/Desktop/RProject(WH)/22. 02. WH PRA 물량 조립안 별 Simulation')
+setwd('C:\\Users\\mano.hong\\Desktop\\RProject(WH)\\22. 02. WH PRA 물량 조립안 별 Simulation\\LF')
 folders <- list.files()
 result <- list()
 
 for(folder in 1:length(folders)){
   
-  setwd('C:/Users/mano.hong/Desktop/RProject(WH)/22. 02. WH PRA 물량 조립안 별 Simulation')
+  setwd('C:\\Users\\mano.hong\\Desktop\\RProject(WH)\\22. 02. WH PRA 물량 조립안 별 Simulation\\LF')
   setwd(paste0('./', folders[folder]))
   
   step <- str_split_fixed(folders[folder], '_', 3)[1]
   info <- substr(folders[folder], 6, 100)
   
-  dat <- read.csv('fin.csv')
-  result[[folder]] <- simulation(dat = dat, NRT = 5, iter = 100, DP = 4) %>% 
+  dat <- fread('fin.csv')
+  result[[folder]] <- simulation(dat = dat, iter = 2, DP = 4) %>% 
     mutate(step = step,
            info = info)
   
   print(info)
   
 }
+
+result
