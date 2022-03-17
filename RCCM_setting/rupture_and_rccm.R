@@ -13,7 +13,7 @@ dat <- read.csv('C:/Users/Mano/Desktop/answer.csv') %>%
 eds <- dat %>% filter(type == 'EDS_FUSE')
 pkg <- dat %>% filter(type == 'PKG_FUSE')
 
-ex <- 'FAMAPRCCM =         ; IFS =     ;  FUSE_RUP = "   "; FUSE_DESC = "                               "; RCCMRD(1);'
+ex <- 'FAMAPRCCM =         ; IFS =     ;  FUSE_RUP = "   "; FUSE_DESC = "                               "; RCCMRD(FUSEINFORM);'
 
 
 # 3. EDS ------------------------------------------------------------------
