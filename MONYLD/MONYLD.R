@@ -8,7 +8,7 @@ files <- list.files()
 files <- files[str_detect(files, '[0-9].txt')]
 
 log_summary <- function(file, DP, result){
-file <- files[9]
+
   dat <- readLines(file)
   
   # Start Point of Cycle
