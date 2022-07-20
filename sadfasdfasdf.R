@@ -4,8 +4,15 @@
 if (!require(dplyr)) {install.packages('dplyr')}; require(dplyr)
 if (!require(ggplot2)) {install.packages('ggplot2')}; require(ggplot2)
 if (!require(reshape2)) {install.packages('reshape2')}; require(reshape2)
-if (!require(readxl)) {install.packages('readxl')}; require(readxl)
+
 if (!require(KoNLP)) {install.packages('KoNLP')}; require(KoNLP)
+if (!require(tm)) {install.packages('tm')}; require(tm)
+if (!require(ldatuning)) {install.packages('ldatuning')}; require(ldatuning)
+if (!require(network)) {install.packages('network')}; require(network)
+if (!require(sna)){install.packages('sna')}; library(sna)
+if (!require(plotly)){install.packages('plotly')}; library(plotly)
+if (!require(GGally)){install.packages('GGally')}; library(GGally)
+
 if (!require(stringr)) {install.packages('stringr')}; require(stringr)
 if (!require(wordcloud2)) {install.packages('wordcloud2')}; require(wordcloud2)
 if (!require(RColorBrewer)) {install.packages('RColorBrewer')}; require(RColorBrewer)
@@ -14,175 +21,197 @@ useSejongDic()
 useNIADic()
 useSystemDic()
 
-buildDictionary(ext_dic = "woorimalsam", user_dic=data.frame("워라밸","ncn"),replace_usr_dic = T)
-
 # 2. Data Loading ---------------------------------------------------------
 
-year <- read.csv('C:/Users/mano.hong/Desktop/year.csv') %>% 
-  group_by(site, CL) %>% 
-  summarise(people = n()) %>% 
-  filter(CL %in% paste0('CL', 1:4))
+survey <- read.csv('C:/Users/Mano/Desktop/survey.csv') 
 
-survey <- read_xlsx('C:/Users/mano.hong/Desktop/survey.xlsx') %>% 
-  rename(site = Q5,
-         CL = Q6)
+# 3. Q2_ ------------------------------------------------------------------
 
-survey_melt <- survey %>% 
-  melt(id.vars = c('date', 'team', 'site', 'CL')) %>% 
-  filter(value != '<NA>') %>% 
-  select(site, CL, variable, value) %>% 
-  `colnames<-`(c('site', 'CL', 'Q', 'A')) %>% 
-  mutate(Q = substr(Q, 1, 3))
+Q2_ <- survey %>% 
+  filter(Q == 'Q2_')
 
 
-# 3. Freq. Analysis -------------------------------------------------------
 
-# 3.1 설문 참여율 --------------------------------------------------------------
-
-survey %>% 
-  group_by(site, CL) %>% 
-  tally() %>% 
-  inner_join(year) %>% 
-  mutate(portion = round(n / people * 100, 1)) %>% 
-  ggplot(aes(x = portion,
-             y = CL,
-             fill = site)) +
-  geom_bar(stat = 'identity', 
-           width = .7,
-           position = position_dodge(width = .8)) +
-  geom_text(aes(label = paste0(portion, '%'),
-                fill = site),
-            position = position_dodge(width = 1), 
-            hjust = -.1) +
-  theme_bw() +
-  scale_x_continuous(limits = c(0, 40)) +
-  scale_fill_manual(values = c('blue', 'red')) +
-  labs(x = 'Portion (%)',
-       y = '') +
-  ggtitle(label = 'Site/CL 별 설문 참여율 (%)') +
-  theme(axis.text.y = element_text(size = 15))
+# 4. Wordcloud ------------------------------------------------------------
 
 
-# 3-2. Freq ---------------------------------------------------------------
+# 4-1. Q3 -----------------------------------------------------------------
 
-survey_melt %>% 
-  filter(Q == 'Q1') %>% 
-  group_by(site, A) %>% 
-  tally %>% 
-  ungroup %>%  
-  inner_join(survey_melt %>% 
-               filter(Q == 'Q1') %>% 
-               group_by(site) %>% 
-               summarise(people = n())) %>% 
-  mutate(portion = round(n / people * 100, 1),
-         A = factor(A, levels = c('매우 만족하고 있고, 타 부서 사람들에게도 자기 부서를 추천할 의향이 있다.',
-                                  '현재 만족하고 있고, 이동할 계획도 없다.',
-                                  '회사 내 평균 수준이라고 생각한다.',
-                                  '부서 이동 계획은 없지만, 큰 매력을 느끼지 못하고 있다.',
-                                  '잡포스팅, 이직 등 구체적인 부서 이동 계획이 있다.'))) %>% 
-  ggplot(aes(x = portion,
-             y = A,
-             fill = site)) +
-  geom_bar(stat = 'identity',
-           position = position_dodge(width = 1),
-           width = .7) +
-  geom_text(aes(label = paste0(portion, '%'),),
-            position = position_dodge(1),
-            hjust = -.1) +
-  theme_bw() +
-  scale_x_continuous(limits = c(0, 50)) +
-  scale_fill_manual(values = c('blue', 'red')) +
-  labs(y = '',
-       x = 'Portion (%)') +
-  theme(axis.text.y = element_text(size = 10))
+Q3_stopwords <- c('같습니', '하나', '뭐라', '에서', '일하', '프로젝트별', '하다', 
+                  '다들', '등등', '많습니', '못받고', '있습니', '하거', '한데',
+                  '한보', '가술', '같긴한데', '그걸', '끌어주냐에', '넓다보니',
+                  '나아지긴', '년간', '될꺼라고', '뒷처리는', '들었습니', '때문에',
+                  '많다보니', '모르겠', '모럴', '못받는', '뭘까요', '받기', '본다는거',
+                  '선두안', '이주훈', '아무것', '안나', '안씁니다', '않는부서는', 
+                  '않습니', '없습니', '업의', '와닿지가', '이기', '이닝', '응신',
+                  '은근', '이걸', '줌꿀', '힘듦', '하게', '때문', '하기', '하려', '해도',
+                  '해서', '공은', '들이', '만큼', '때문에', '로운', '보면', '해주', '많은',
+                  '안해', '좋겠', '아니길', '여러', '누구냐에', '하시시', '하지', '하면')
 
+Q3 <- survey %>% 
+  filter(Q == 'Q3')
 
-survey_melt %>% 
-  filter(Q == 'Q2.') %>% 
-  mutate(A = str_split_fixed(A, ':', 2)[, 1],
-         A = ifelse(substr(A, 1, 3) == '직무별', '업무 강도 차이', A)) %>% 
-  group_by(site, A) %>% 
-  tally %>% 
-  ungroup %>%  
-  inner_join(survey_melt %>% 
-               filter(Q == 'Q2.') %>% 
-               group_by(site) %>% 
-               summarise(people = n())) %>% 
-  mutate(portion = round(n / people * 100, 1)) %>% 
-  ggplot(aes(x = portion,
-             y = A,
-             fill = site)) +
-  geom_bar(stat = 'identity',
-           position = position_dodge(width = 1),
-           width = .7) +
-  geom_text(aes(label = paste0(portion, '%'),),
-            position = position_dodge(1),
-            hjust = -.1) +
-  theme_bw() +
-  scale_x_continuous(limits = c(0, 30)) +
-  scale_fill_manual(values = c('blue', 'red')) +
-  labs(y = '',
-       x = 'Portion (%)') +
-  theme(axis.text.y = element_text(size = 20))
+Q3_nouns <- sapply(Q3$A, 
+                   function(x){
+                     x <- extractNoun(x)
+                     x <- x[nchar(x) > 1 & nchar(x) < 6]
+                     x <- x %>% 
+                       str_replace_all('사람들', '사람') %>% 
+                       str_replace_all('교육가', '교육') %>% 
+                       str_replace_all('문화때문에', '문화') %>% 
+                       str_replace_all('존재하는거', '존재') %>% 
+                       str_replace_all('차이나', '차이') %>% 
+                       str_replace_all('발생핢', '발생') %>% 
+                       str_replace_all('워라', '워라밸') %>% 
+                       str_replace_all('주도하', '주도') %>% 
+                       str_replace_all('발생핢', '발생') %>% 
+                       str_replace_all('스트래스도', '스트레스') %>% 
+                       str_remove_all(paste(Q3_stopwords, collapse = '|')) %>% 
+                       str_replace_all('\\s+', ' ') %>% 
+                       str_trim()
+                   }, 
+                   USE.NAMES = F)
 
-survey_melt$A <- survey_melt$A %>% 
-  str_remove_all('[^가-힣\\s+]') %>% 
-  str_replace_all('\\s+', ' ') %>% 
-  str_trim()
+Q3_nouns <- sapply(Q3_nouns, function(x){x <- x[x != '']})
+Q3_nouns[[7]] <- '업무'
 
-# 3-3. Wordcloud ----------------------------------------------------------
-
-wordcloud <- function(dat, Q, site){
+wordcloud <- function(dat, nouns, site, CL){
   
-  Q3_wordcloud <- dat %>% 
-    filter(Q == 'Q4')
+  site <- dat$site == site
+  CL <- dat$CL == CL
   
-  Q3_wordcloud$A <- Q3_wordcloud$A %>% 
-    str_remove_all('[^가-힣\\s+]') %>% 
-    str_replace_all('\\s+', ' ') %>% 
-    str_trim()
-  
-  Q3_word <- extractNoun(Q3_wordcloud$A)
-  Q3_word <- sapply(Q3_word, function(x) { Filter(function(x){nchar(x) > 1 & nchar(x) < 5 }, x)})
-  
-  Q3_word_OY <- Q3_word[Q3_wordcloud$site == '온양'] %>% 
+  nouns <- nouns[site & CL] %>% 
     unlist %>% 
     table %>% 
     as.data.frame() %>% 
     arrange(desc(Freq)) %>% 
-    mutate(Freq = ifelse(Freq > 200, 200, Freq)) %>% 
-    filter(. != '업무' & . != '업무량')
-  
-  Q3_word_H1 <- Q3_word[Q3_wordcloud$site != '온양'] %>% 
-    unlist %>% 
-    table %>% 
-    as.data.frame() %>% 
-    arrange(desc(Freq)) %>% 
-    mutate(Freq = ifelse(Freq > 200, 200, Freq)) %>% 
-    filter(. != '업무' & . != '업무량')
+    filter(. != '' & . != ' ' & . != '업무') %>% 
+    mutate(Freq = ifelse(Freq > 50, 50, Freq))
   
   pal <- brewer.pal(8, 'Dark2')
   
-  if(site == 'OY'){
-    
-    wordcloud2(Q3_word_OY, minSize = 10, color = pal, shape = 'circle')
-    
-  }else{
-    
-    wordcloud2(Q3_word_H1, minSize = 10, color = pal, shape = 'circle')
-    
-  }
+  wordcloud2(nouns, minSize = 3, color = pal, shape = 'circle')
   
 }
 
-wordcloud(survey_melt, 'Q3', 'OY')
-wordcloud(survey_melt, 'Q3', 'H1')
+wordcloud(Q3, Q3_nouns, '온양', 'CL2')
+wordcloud(Q3, Q3_nouns, '온양', 'CL3')
+wordcloud(Q3, Q3_nouns, '온양', 'CL4')
 
-wordcloud(survey_melt, 'Q4', 'OY')
-wordcloud(survey_melt, 'Q4', 'H1')
+wordcloud(Q3, Q3_nouns, '화성', 'CL2')
+wordcloud(Q3, Q3_nouns, '화성', 'CL3')
+wordcloud(Q3, Q3_nouns, '화성', 'CL4')
 
-survey_melt$site <- enc2utf8(survey_melt$site)
-survey_melt$CL <- enc2utf8(survey_melt$CL)
-survey_melt$Q <- enc2utf8(survey_melt$Q)
-survey_melt$A <- enc2utf8(survey_melt$A)
-write.csv(survey_melt, 'C:/Users/mano.hong/Desktop/ss.csv', row.names = F)
+
+# 4-2. Q4 -----------------------------------------------------------------
+
+Q4 <- survey %>% 
+  filter(Q == 'Q4')
+
+Q4_nouns <- sapply(Q4$A, 
+                   function(x){
+                     x <- extractNoun(x)
+                     x <- x[nchar(x) > 1 & nchar(x) < 6]
+                     x <- x %>% 
+                       str_replace_all('사람들', '사람') %>% 
+                       str_replace_all('교육가', '교육') %>% 
+                       str_replace_all('문화때문에', '문화') %>% 
+                       str_replace_all('존재하는거', '존재') %>% 
+                       str_replace_all('차이나', '차이') %>% 
+                       str_replace_all('발생핢', '발생') %>% 
+                       str_replace_all('워라', '워라밸') %>% 
+                       str_replace_all('주도하', '주도') %>% 
+                       str_replace_all('발생핢', '발생') %>% 
+                       str_replace_all('스트래스도', '스트레스') %>% 
+                       str_remove_all(paste(Q3_stopwords, collapse = '|')) %>% 
+                       str_replace_all('\\s+', ' ') %>% 
+                       str_trim()
+                   }, 
+                   USE.NAMES = F)
+
+
+wordcloud(Q4, Q4_nouns, 'OY', 'CL2')
+wordcloud(Q4, Q4_nouns, 'OY', 'CL3')
+wordcloud(Q4, Q4_nouns, 'OY', 'CL4')
+
+wordcloud(Q4, Q4_nouns, 'H1', 'CL2')
+wordcloud(Q4, Q4_nouns, 'H1', 'CL3')
+wordcloud(Q4, Q4_nouns, 'H1', 'CL4')
+
+
+# 5. SNA ------------------------------------------------------------------
+
+SNA <- function(dat, nouns, site, CL, cor, sparse){
+  
+  site <- dat$site == site
+  CL <- dat$CL == CL
+  
+  nouns <- nouns[site & CL]
+  nouns <- sapply(nouns, function(x) {x <- x[x != '']})
+  
+  
+  for(i in 1:length(nouns)){
+    
+    if(length(nouns[[i]]) == 0){
+      
+      nouns[[i]] <- NULL
+      
+    }
+  }
+  
+  cps <- VCorpus(VectorSource(nouns))
+  
+  dtmTfIdf <- DocumentTermMatrix(x = cps,
+                                 control = list(wordLengths = c(2, Inf),
+                                                weighting = function(x) weightTfIdf(x, normalize = T)))
+
+  dtmTfIdf <- removeSparseTerms(x =  dtmTfIdf,
+                                sparse = as.numeric(x = sparse))
+  
+  
+  dtmTfIdf$dimnames$Terms <- toupper(dtmTfIdf$dimnames$Terms)
+  
+  corTerms <- dtmTfIdf %>% as.matrix() %>% cor()
+  corTerms[corTerms <= cor] <- 0
+  
+  netTerms <- network(x = corTerms, directed = T)
+  btnTerms <- betweenness(netTerms)
+  
+  netTerms %v% 'mode' <-
+    ifelse(test = btnTerms >= quantile(x = btnTerms, probs = 0.9, na.rm = T), 'Top10%', 'Other')
+  
+  nodeColors <- c('Top10%' = 'yellow',
+                  'Other' = 'white')
+
+  
+  set.edge.value(netTerms, attrname = 'edgeSize', value = 0.05)
+  
+  ggplotly(
+    
+    ggnet2(
+      net = netTerms,
+      layout.par = list(cell.jitter = 0.001),
+      size.min = 5,
+      label = TRUE,
+      label.size = 3,
+      node.color = 'mode',
+      palette = nodeColors,
+      node.size = sna::degree(dat = netTerms),
+      edge.size = 'edgeSize'),
+    
+    tooltip = 'color'
+    
+  )
+  
+}
+
+
+SNA(Q3, Q3_nouns, '화성', 'CL2', 0.3, 0.98)
+SNA(Q3, Q3_nouns, '온양', 'CL2', 0, 0.98)
+
+SNA(Q3, Q3_nouns, '화성', 'CL3', 0.1, 0.91)
+SNA(Q3, Q3_nouns, '온양', 'CL3', 0.3, 0.98)
+
+
+SNA(Q3, Q3_nouns, '화성', 'CL4', 0.1, 0.99)
+SNA(Q3, Q3_nouns, '온양', 'CL4', 0.05, 0.98)
